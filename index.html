@@ -1,0 +1,2219 @@
+<!--
+  친환경 제설제를 찾아라! - 영재원 프로젝트 탐구활동지 웹앱
+  학생이 입력 → 자동 저장 → 자동 그래프/계산 → docx 다운로드
+-->
+<style>
+  :root {
+    --primary: #1F4E79;
+    --primary-light: #D5E8F0;
+    --gray-bg: #F2F2F2;
+    --border: #999999;
+    --border-light: #CCCCCC;
+    --hint: #7F7F7F;
+    --label: #333333;
+    --accent: #2E75B6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Malgun Gothic', '맑은 고딕', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f5f7fa;
+    margin: 0;
+    color: #222;
+    line-height: 1.5;
+  }
+  #root { padding: 0; }
+
+  /* Top bar */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: white;
+    border-bottom: 1px solid #ddd;
+    padding: 12px 20px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .topbar h1 { margin: 0; font-size: 16px; color: var(--primary); flex: 1; }
+  .save-status { font-size: 13px; color: #6b7280; }
+  .save-status.saved { color: #059669; }
+  .btn {
+    border: none; cursor: pointer;
+    padding: 8px 16px; border-radius: 6px;
+    font-size: 14px; font-weight: 600;
+    background: var(--primary); color: white;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: #163a5a; }
+  .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+  .btn-secondary { background: #e5e7eb; color: #374151; }
+  .btn-secondary:hover { background: #d1d5db; }
+  .btn-danger { background: #dc2626; }
+  .btn-danger:hover { background: #b91c1c; }
+
+  /* Section navigation */
+  .nav {
+    background: white; border-bottom: 1px solid #e5e7eb;
+    padding: 0 20px; display: flex; flex-wrap: wrap; gap: 4px;
+    position: sticky; top: 57px; z-index: 99;
+  }
+  .nav button {
+    background: transparent; border: none; padding: 10px 14px;
+    cursor: pointer; font-size: 13px; color: #4b5563;
+    border-bottom: 3px solid transparent;
+    font-family: inherit;
+  }
+  .nav button.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 700; }
+  .nav button:hover { background: #f3f4f6; }
+
+  /* Main content */
+  .container {
+    max-width: 980px; margin: 0 auto;
+    padding: 24px 32px 80px;
+    background: white;
+    min-height: 100vh;
+  }
+
+  /* Section headers — match docx */
+  .h1-blue {
+    background: var(--primary);
+    color: white;
+    padding: 14px 20px;
+    margin: 32px 0 14px;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .h1-blue:first-child { margin-top: 0; }
+  .h2-blue {
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 4px;
+    margin: 28px 0 12px;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .stage-goal {
+    color: #595959; font-style: italic; font-size: 13px;
+    margin: 4px 0 16px;
+  }
+  .hint {
+    background: #fffbeb;
+    border-left: 3px solid #fbbf24;
+    padding: 6px 12px;
+    color: #6b5b3a;
+    font-style: italic;
+    font-size: 13px;
+    margin: 8px 0 12px;
+  }
+  .bullet-h {
+    font-weight: 700; color: var(--label);
+    font-size: 14px; margin: 18px 0 6px;
+  }
+
+  /* Form tables — match docx style */
+  table.ftbl {
+    width: 100%; border-collapse: collapse;
+    margin: 8px 0 16px;
+    table-layout: fixed;
+  }
+  table.ftbl th {
+    background: var(--primary);
+    color: white;
+    font-weight: 700;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    text-align: center;
+    font-size: 13px;
+  }
+  table.ftbl td {
+    border: 1px solid var(--border);
+    padding: 4px;
+    vertical-align: top;
+    font-size: 13px;
+    background: white;
+  }
+  table.ftbl td.label {
+    background: var(--gray-bg);
+    font-weight: 700;
+    text-align: center;
+    padding: 8px 6px;
+    vertical-align: middle;
+  }
+  table.ftbl td.label-left {
+    background: var(--gray-bg);
+    font-weight: 700;
+    padding: 8px 12px;
+    vertical-align: middle;
+  }
+
+  /* Inputs */
+  input.cell, textarea.cell {
+    width: 100%; border: none;
+    padding: 6px 8px; font-size: 13px;
+    background: transparent;
+    font-family: inherit;
+    color: #111;
+    outline: none;
+  }
+  input.cell:focus, textarea.cell:focus {
+    background: #fffbe6;
+  }
+  textarea.cell { resize: vertical; min-height: 32px; line-height: 1.4; }
+  textarea.big { min-height: 100px; }
+  textarea.huge { min-height: 160px; }
+
+  input.cell[type=number] { text-align: center; }
+  .calc-cell {
+    background: #f0f9ff !important;
+    color: #0c4a6e;
+    font-weight: 600;
+    text-align: center;
+    padding: 8px;
+  }
+
+  /* Image upload */
+  .img-upload {
+    border: 2px dashed #cbd5e1;
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 12px;
+    min-height: 100px;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  .img-upload:hover { border-color: var(--primary); background: #f0f9ff; }
+  .img-upload img { max-width: 100%; max-height: 200px; border-radius: 4px; }
+  .img-upload input { display: none; }
+  .img-remove {
+    margin-top: 6px; font-size: 11px;
+    color: #dc2626; cursor: pointer;
+    text-decoration: underline;
+  }
+
+  /* Cover page */
+  .cover {
+    text-align: center;
+    padding: 30px 20px;
+    background: linear-gradient(180deg, #f0f9ff 0%, white 100%);
+    border-radius: 8px;
+    margin-bottom: 32px;
+  }
+  .cover .small-title { font-size: 13px; color: var(--primary); letter-spacing: 4px; margin-bottom: 12px; }
+  .cover .main-title { font-size: 32px; font-weight: 700; color: var(--primary); margin: 12px 0 8px; }
+  .cover .subtitle { font-style: italic; color: #6b7280; font-size: 14px; margin-bottom: 24px; }
+
+  /* Chart container */
+  .chart-box {
+    background: white; border: 1px solid var(--border-light);
+    padding: 16px; margin: 8px 0 16px; border-radius: 4px;
+  }
+  .chart-box canvas { max-width: 100%; }
+
+  /* Radio group */
+  .radio-grp { display: flex; gap: 14px; padding: 6px; }
+  .radio-grp label { font-size: 13px; cursor: pointer; }
+
+  /* Helper text */
+  .small-note { font-size: 12px; color: #6b7280; margin: 4px 0 12px; }
+
+  /* Download section */
+  .download-section {
+    background: linear-gradient(135deg, #1F4E79 0%, #2E75B6 100%);
+    color: white;
+    padding: 40px 30px;
+    border-radius: 12px;
+    text-align: center;
+    margin-top: 32px;
+  }
+  .download-section h2 { margin: 0 0 12px; font-size: 24px; }
+  .download-section p { margin: 6px 0 20px; opacity: 0.9; font-size: 14px; }
+  .download-section .btn-big {
+    background: white; color: var(--primary);
+    font-size: 16px; padding: 14px 32px;
+    border-radius: 8px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .download-section .btn-big:hover { background: #f0f9ff; }
+
+  /* Progress */
+  .progress-bar { background: #e5e7eb; height: 6px; border-radius: 3px; overflow: hidden; margin: 8px 0; }
+  .progress-bar > div { background: var(--primary); height: 100%; transition: width 0.3s; }
+
+  /* Error */
+  .err-msg { color: #dc2626; font-size: 13px; padding: 8px 12px; background: #fef2f2; border-radius: 4px; margin: 8px 0; }
+
+  /* Misc */
+  .col-grid { display: grid; gap: 10px; }
+  .col-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .col-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .row-flex { display: flex; gap: 12px; align-items: center; }
+
+  /* Loading overlay */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .overlay-box {
+    background: white; padding: 30px 40px; border-radius: 8px;
+    text-align: center; max-width: 360px;
+  }
+  .spinner {
+    border: 3px solid #e5e7eb; border-top-color: var(--primary);
+    border-radius: 50%; width: 36px; height: 36px;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<div id="root">
+  <div style="padding:40px;text-align:center;color:#64748b;">웹앱 로딩 중...</div>
+</div>
+
+<!-- React 18, Babel, Chart.js, docx, file-saver from cdnjs -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+<script type="text/babel" data-presets="env,react">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+// ===================================================================
+// DATA SHAPE — initial empty state
+// ===================================================================
+const EMPTY_DATA = {
+  cover: { group_name: '', members: '', teacher: '', period: '', submission_date: '' },
+  abstract: '',
+  part1: {
+    cases: Array(6).fill(null).map(() => ({ type: '', detail: '', source: '' })),
+    problem_definition: '',
+    ideal_conditions: ['', '', '', '', ''],
+  },
+  part2: {
+    substances: Array(6).fill(null).map(() => ({ name: '', formula: '', country_use: '', price: '', env_impact: '' })),
+    candidates: Array(5).fill(null).map(() => ({ name: '', reason: '' })),
+    matrix: [
+      { criterion: '어는점 내림 효과', method: '실험 A 결과: 측정한 어는점 내림 값', weight: '' },
+      { criterion: '융해 효율', method: '실험 B 결과: 단위 시간당 융해된 얼음의 질량', weight: '' },
+      { criterion: '환경 영향', method: '실험 D 결과: 식물 발아율 + 금속 부식 정도 (역지표)', weight: '' },
+      { criterion: '경제성', method: '2-1에서 조사한 단위 질량당 가격 (역지표)', weight: '' },
+      { criterion: '', method: '', weight: '' },
+    ],
+    weight_reasoning: '',
+    research_question: '',
+    hypothesis_statement: '',
+    hypothesis_basis: '',
+  },
+  part3: {
+    expA: {
+      purpose: '',
+      variables: { independent: '', dependent: '', controlled: '' },
+      materials: '',
+      steps: ['', '', '', '', ''],
+      candidates_name: { A: '', B: '', C: '', D: '' },
+      temp_data: {
+        pure: ['', '', '', '', '', '', ''],
+        A: ['', '', '', '', '', '', ''],
+        B: ['', '', '', '', '', '', ''],
+        C: ['', '', '', '', '', '', ''],
+        D: ['', '', '', '', '', '', ''],
+      },
+      fp_compare: {
+        A: { theoretical: '', experimental: '' },
+        B: { theoretical: '', experimental: '' },
+        C: { theoretical: '', experimental: '' },
+        D: { theoretical: '', experimental: '' },
+      },
+      analysis: '',
+    },
+    expB: {
+      purpose: '',
+      steps: ['', '', '', '', ''],
+      melt_data: {
+        control: ['', '', '', '', '', ''],
+        A: ['', '', '', '', '', ''],
+        B: ['', '', '', '', '', ''],
+        C: ['', '', '', '', '', ''],
+        D: ['', '', '', '', '', ''],
+      },
+      analysis: '',
+    },
+    expC: {
+      data: {
+        A: { solute_mass: '', water_mass: '', temp_change: '' },
+        B: { solute_mass: '', water_mass: '', temp_change: '' },
+        C: { solute_mass: '', water_mass: '', temp_change: '' },
+        D: { solute_mass: '', water_mass: '', temp_change: '' },
+      },
+      compare: {
+        A: { experimental: '', theoretical: '' },
+        B: { experimental: '', theoretical: '' },
+        C: { experimental: '', theoretical: '' },
+        D: { experimental: '', theoretical: '' },
+      },
+    },
+    expD1: {
+      design: { seed_type: '', seed_count: '', concentrations: '', duration: '' },
+      results: {
+        A: { c0: '', c05: '', c1: '', c3: '', note: '' },
+        B: { c0: '', c05: '', c1: '', c3: '', note: '' },
+        C: { c0: '', c05: '', c1: '', c3: '', note: '' },
+        D: { c0: '', c05: '', c1: '', c3: '', note: '' },
+      },
+      photos: { day0: null, day3: null, end: null },
+      analysis: '',
+    },
+    expD2: {
+      design: { metal: '', concentration: '', duration: '' },
+      results: {
+        control: { mass_before: '', mass_after: '', corrosion: '' },
+        A: { mass_before: '', mass_after: '', corrosion: '' },
+        B: { mass_before: '', mass_after: '', corrosion: '' },
+        C: { mass_before: '', mass_after: '', corrosion: '' },
+        D: { mass_before: '', mass_after: '', corrosion: '' },
+      },
+      photos: { before: null, after: null },
+      analysis: '',
+    },
+    expE: {
+      single_limits: '',
+      recipe: Array(3).fill(null).map(() => ({ component: '', ratio: '', reason: '' })),
+      verification: {
+        fp: { best: '', mixed: '', improvement: '' },
+        melt: { best: '', mixed: '', improvement: '' },
+        germ: { best: '', mixed: '', improvement: '' },
+      },
+      conclusion: '',
+    },
+  },
+  part4: {
+    summary: {
+      fp: { A: '', B: '', C: '', D: '', mixed: '' },
+      melt: { A: '', B: '', C: '', D: '', mixed: '' },
+      heat: { A: '', B: '', C: '', D: '', mixed: '' },
+      germ: { A: '', B: '', C: '', D: '', mixed: '' },
+      corrosion: { A: '', B: '', C: '', D: '', mixed: '' },
+      price: { A: '', B: '', C: '', D: '', mixed: '' },
+    },
+    scoring: {
+      fp:        { weight: '', A: '', B: '', C: '', D: '', mixed: '' },
+      melt:      { weight: '', A: '', B: '', C: '', D: '', mixed: '' },
+      env:       { weight: '', A: '', B: '', C: '', D: '', mixed: '' },
+      economic:  { weight: '', A: '', B: '', C: '', D: '', mixed: '' },
+    },
+  },
+  part5: {
+    optimal: '',
+    optimal_basis: '',
+    use_cases: [
+      { env: '주거 지역 / 가로수 옆 보도', rec: '', reason: '' },
+      { env: '고속도로 / 차도', rec: '', reason: '' },
+      { env: '학교 운동장', rec: '', reason: '' },
+      { env: '공항 활주로', rec: '', reason: '' },
+    ],
+    hyp_verification: { result: '', basis: '' },  // result: 'supported' | 'partial' | 'refuted'
+    limitations: '',
+    future_research: '',
+  },
+  references: Array(8).fill(''),
+  part7: {
+    self: { name: '', role: '', did_well: '', could_improve: '', learned: '' },
+    group_eval: {
+      active:   '', fair:    '', participate: '',
+      helping:  '', honest:  '', contribute:  '',
+    },
+    proud: '',
+    improvement: '',
+  },
+};
+
+// ===================================================================
+// STORAGE — uses window.storage if in Claude artifact, else localStorage
+// ===================================================================
+const STORAGE_KEY = 'snow_melter_research_v1';
+
+const hasClaudeStorage = typeof window !== 'undefined' && window.storage && typeof window.storage.get === 'function';
+
+async function loadData() {
+  try {
+    if (hasClaudeStorage) {
+      const res = await window.storage.get(STORAGE_KEY);
+      if (res && res.value) return deepMerge(EMPTY_DATA, JSON.parse(res.value));
+    } else if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return deepMerge(EMPTY_DATA, JSON.parse(raw));
+    }
+  } catch (e) { /* fresh start */ }
+  return EMPTY_DATA;
+}
+
+async function saveData(data) {
+  try {
+    const json = JSON.stringify(data);
+    if (hasClaudeStorage) {
+      await window.storage.set(STORAGE_KEY, json);
+    } else if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, json);
+    } else {
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('Save failed:', e);
+    return false;
+  }
+}
+
+async function clearStorage() {
+  try {
+    if (hasClaudeStorage) await window.storage.delete(STORAGE_KEY);
+    else if (typeof localStorage !== 'undefined') localStorage.removeItem(STORAGE_KEY);
+  } catch (e) { /* ignore */ }
+}
+
+function deepMerge(target, source) {
+  if (Array.isArray(target)) {
+    return Array.isArray(source) ? source : target;
+  }
+  if (typeof target === 'object' && target !== null) {
+    const result = { ...target };
+    if (typeof source === 'object' && source !== null) {
+      for (const k in source) {
+        if (k in target) result[k] = deepMerge(target[k], source[k]);
+        else result[k] = source[k];
+      }
+    }
+    return result;
+  }
+  return source !== undefined ? source : target;
+}
+// Immutable update helper for nested paths
+function update(obj, path, value) {
+  if (path.length === 0) return value;
+  const [head, ...rest] = path;
+  if (Array.isArray(obj)) {
+    const copy = [...obj];
+    copy[head] = update(obj[head], rest, value);
+    return copy;
+  }
+  return { ...obj, [head]: update(obj[head] || {}, rest, value) };
+}
+
+// ===================================================================
+// UI HELPERS
+// ===================================================================
+function TextInput({ value, onChange, placeholder, type = 'text' }) {
+  return (
+    <input
+      className="cell"
+      type={type}
+      value={value || ''}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder || ''}
+    />
+  );
+}
+
+function TextArea({ value, onChange, placeholder, big, huge }) {
+  let cls = 'cell';
+  if (huge) cls += ' huge';
+  else if (big) cls += ' big';
+  return (
+    <textarea
+      className={cls}
+      value={value || ''}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder || ''}
+    />
+  );
+}
+
+function Hint({ children }) {
+  return <div className="hint">💡 {children}</div>;
+}
+
+function BulletH({ children }) {
+  return <div className="bullet-h">▶ {children}</div>;
+}
+
+function ImageUpload({ value, onChange, label }) {
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('이미지 파일은 5MB 이하여야 합니다.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => onChange(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+  return (
+    <label className="img-upload">
+      {value ? (
+        <>
+          <img src={value} alt={label} />
+          <span className="img-remove" onClick={(e) => { e.preventDefault(); onChange(null); }}>제거</span>
+        </>
+      ) : (
+        <>
+          <div style={{fontSize:'24px',marginBottom:'4px'}}>📷</div>
+          <div>{label || '사진 업로드'}</div>
+          <div style={{fontSize:'11px',marginTop:'4px',color:'#94a3b8'}}>클릭하여 선택</div>
+        </>
+      )}
+      <input type="file" accept="image/*" onChange={handleFile} />
+    </label>
+  );
+}
+
+// ===================================================================
+// CALCULATIONS
+// ===================================================================
+const WATER_SPECIFIC_HEAT = 4.184; // J/g·℃
+
+function calcHeat(solute_mass, water_mass, temp_change) {
+  const wm = parseFloat(water_mass);
+  const tc = parseFloat(temp_change);
+  if (isNaN(wm) || isNaN(tc)) return '';
+  const q = WATER_SPECIFIC_HEAT * wm * tc;
+  return q.toFixed(1) + ' J';
+}
+
+function calcWeightedAverage(scoring, candidate) {
+  // Sum of (weight * score) / total weight
+  let totalWeight = 0;
+  let weightedSum = 0;
+  for (const key of ['fp', 'melt', 'env', 'economic']) {
+    const w = parseFloat(scoring[key].weight);
+    const s = parseFloat(scoring[key][candidate]);
+    if (!isNaN(w) && !isNaN(s)) {
+      totalWeight += w;
+      weightedSum += w * s;
+    }
+  }
+  if (totalWeight === 0) return '';
+  return (weightedSum / totalWeight * (totalWeight === 100 ? 1 : 100/totalWeight)).toFixed(2);
+}
+
+function sumWeights(scoring) {
+  let total = 0;
+  for (const key of ['fp', 'melt', 'env', 'economic']) {
+    const w = parseFloat(scoring[key].weight);
+    if (!isNaN(w)) total += w;
+  }
+  return total;
+}
+
+function sumMatrixWeights(matrix) {
+  let total = 0;
+  for (const row of matrix) {
+    const w = parseFloat(row.weight);
+    if (!isNaN(w)) total += w;
+  }
+  return total;
+}
+
+// ===================================================================
+// CHARTS (Chart.js)
+// ===================================================================
+function useChart(ref, configRef, deps) {
+  const chartInstance = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const config = configRef();
+    if (chartInstance.current) {
+      chartInstance.current.data = config.data;
+      chartInstance.current.options = config.options;
+      chartInstance.current.update();
+    } else {
+      chartInstance.current = new Chart(ref.current, config);
+    }
+  }, deps);
+  useEffect(() => () => {
+    if (chartInstance.current) {
+      chartInstance.current.destroy();
+      chartInstance.current = null;
+    }
+  }, []);
+  return chartInstance;
+}
+
+const CANDIDATE_COLORS = {
+  pure:    '#94a3b8',
+  control: '#94a3b8',
+  A:       '#dc2626',
+  B:       '#2563eb',
+  C:       '#16a34a',
+  D:       '#a855f7',
+  mixed:   '#ea580c',
+};
+
+function CoolingCurveChart({ data, names }) {
+  const ref = useRef();
+  const timeLabels = ['0', '60', '120', '180', '240', '300', '360'];
+
+  useChart(ref, () => {
+    const datasets = [];
+    const rows = [
+      { key: 'pure', label: '순수한 물' },
+      { key: 'A', label: '후보 A' + (names.A ? ` (${names.A})` : '') },
+      { key: 'B', label: '후보 B' + (names.B ? ` (${names.B})` : '') },
+      { key: 'C', label: '후보 C' + (names.C ? ` (${names.C})` : '') },
+      { key: 'D', label: '후보 D' + (names.D ? ` (${names.D})` : '') },
+    ];
+    for (const r of rows) {
+      const vals = (data[r.key] || []).map(v => v === '' || v == null ? null : parseFloat(v));
+      if (vals.some(v => v != null && !isNaN(v))) {
+        datasets.push({
+          label: r.label,
+          data: vals,
+          borderColor: CANDIDATE_COLORS[r.key],
+          backgroundColor: CANDIDATE_COLORS[r.key] + '33',
+          tension: 0.2,
+          spanGaps: true,
+        });
+      }
+    }
+    return {
+      type: 'line',
+      data: { labels: timeLabels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: '냉각 곡선 (시간 vs 온도)', font: { size: 14 } },
+          legend: { position: 'top' },
+        },
+        scales: {
+          x: { title: { display: true, text: '시간 (초)' } },
+          y: { title: { display: true, text: '온도 (℃)' } },
+        },
+      },
+    };
+  }, [JSON.stringify(data), JSON.stringify(names)]);
+
+  return (
+    <div className="chart-box" style={{height: '320px'}}>
+      <canvas ref={ref}></canvas>
+    </div>
+  );
+}
+
+function MeltingCurveChart({ data }) {
+  const ref = useRef();
+  const timeLabels = ['0', '2', '4', '6', '8', '10'];
+
+  useChart(ref, () => {
+    const datasets = [];
+    const rows = [
+      { key: 'control', label: '대조군' },
+      { key: 'A', label: '후보 A' },
+      { key: 'B', label: '후보 B' },
+      { key: 'C', label: '후보 C' },
+      { key: 'D', label: '후보 D' },
+    ];
+    for (const r of rows) {
+      const vals = (data[r.key] || []).map(v => v === '' || v == null ? null : parseFloat(v));
+      if (vals.some(v => v != null && !isNaN(v))) {
+        datasets.push({
+          label: r.label,
+          data: vals,
+          borderColor: CANDIDATE_COLORS[r.key],
+          backgroundColor: CANDIDATE_COLORS[r.key] + '33',
+          tension: 0.2,
+          spanGaps: true,
+        });
+      }
+    }
+    return {
+      type: 'line',
+      data: { labels: timeLabels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: '시간에 따른 누적 융해량', font: { size: 14 } },
+          legend: { position: 'top' },
+        },
+        scales: {
+          x: { title: { display: true, text: '시간 (분)' } },
+          y: { title: { display: true, text: '누적 융해량 (g)' } },
+        },
+      },
+    };
+  }, [JSON.stringify(data)]);
+
+  return (
+    <div className="chart-box" style={{height: '320px'}}>
+      <canvas ref={ref}></canvas>
+    </div>
+  );
+}
+
+function RadarChart({ scoring }) {
+  const ref = useRef();
+
+  useChart(ref, () => {
+    const labels = ['어는점 내림 효과', '융해 효율', '환경 영향', '경제성'];
+    const datasets = [];
+    for (const cand of ['A', 'B', 'C', 'D', 'mixed']) {
+      const values = ['fp', 'melt', 'env', 'economic'].map(k => {
+        const v = parseFloat(scoring[k][cand]);
+        return isNaN(v) ? 0 : v;
+      });
+      if (values.some(v => v > 0)) {
+        datasets.push({
+          label: cand === 'mixed' ? '혼합 처방' : '후보 ' + cand,
+          data: values,
+          borderColor: CANDIDATE_COLORS[cand],
+          backgroundColor: CANDIDATE_COLORS[cand] + '44',
+          borderWidth: 2,
+        });
+      }
+    }
+    return {
+      type: 'radar',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: '평가 매트릭스 레이더 차트', font: { size: 14 } },
+          legend: { position: 'top' },
+        },
+        scales: {
+          r: { beginAtZero: true, min: 0, max: 5,
+            ticks: { stepSize: 1 } },
+        },
+      },
+    };
+  }, [JSON.stringify(scoring)]);
+
+  return (
+    <div className="chart-box" style={{height: '380px'}}>
+      <canvas ref={ref}></canvas>
+    </div>
+  );
+}
+
+// Helpers to grab chart canvas as base64 image (for docx export)
+function getChartImageDataURL(canvasEl) {
+  if (!canvasEl) return null;
+  try { return canvasEl.toDataURL('image/png'); }
+  catch (e) { return null; }
+}
+
+// ===================================================================
+// FORM SECTION COMPONENTS
+// ===================================================================
+
+function CoverSection({ data, set }) {
+  const c = data.cover;
+  return (
+    <div>
+      <div className="cover">
+        <div className="small-title">영재원 프로젝트 산출물</div>
+        <div className="main-title">친환경 제설제를 찾아라!</div>
+        <div className="subtitle">— 다양한 물질의 제설 효과와 환경 영향 비교 탐구 —</div>
+      </div>
+      <BulletH>기본 정보</BulletH>
+      <table className="ftbl">
+        <colgroup><col style={{width:'140px'}}/><col/></colgroup>
+        <tbody>
+          <tr><td className="label-left">과정</td><td><TextInput value="중등과학심화" onChange={()=>{}} /></td></tr>
+          <tr><td className="label-left">모둠명</td><td><TextInput value={c.group_name} onChange={v => set(['cover','group_name'], v)} placeholder="예: 1모둠 / 화학탐험대" /></td></tr>
+          <tr><td className="label-left">모둠 구성원</td><td><TextInput value={c.members} onChange={v => set(['cover','members'], v)} placeholder="홍길동, 김철수, 이영희, ..." /></td></tr>
+          <tr><td className="label-left">지도 교사</td><td><TextInput value={c.teacher} onChange={v => set(['cover','teacher'], v)} placeholder="○○○ 선생님" /></td></tr>
+          <tr><td className="label-left">연구 기간</td><td><TextInput value={c.period} onChange={v => set(['cover','period'], v)} placeholder="예: 2026.03 ~ 2026.06" /></td></tr>
+          <tr><td className="label-left">제출일</td><td><TextInput value={c.submission_date} onChange={v => set(['cover','submission_date'], v)} placeholder="YYYY-MM-DD" /></td></tr>
+        </tbody>
+      </table>
+
+      <BulletH>연구 요약 (Abstract)</BulletH>
+      <Hint>프로젝트가 모두 끝난 뒤 마지막에 작성하자. 5~7문장으로 "무엇을, 왜, 어떻게, 결과, 결론" 순서로 요약한다.</Hint>
+      <table className="ftbl"><tbody><tr><td><TextArea value={data.abstract} onChange={v => set(['abstract'], v)} huge placeholder="연구 요약을 5~7문장으로..."/></td></tr></tbody></table>
+    </div>
+  );
+}
+
+function Part1Section({ data, set }) {
+  const p = data.part1;
+  return (
+    <div>
+      <div className="h1-blue">Part 1. 문제인식</div>
+      <div className="stage-goal">이 단계의 목표: "왜 우리가 이 연구를 해야 하는가"에 대한 우리 모둠의 답을 만든다.</div>
+
+      <div className="h2-blue">1-1. 우리 주변의 "제설제 문제" 사례 조사</div>
+      <Hint>뉴스, 환경부·국립환경과학원 자료, 논문, 사진 등을 활용해 제설제로 인한 실제 피해 사례를 조사하자. 가능하면 환경(가로수·하천·토양), 시설(콘크리트·금속·차량 부식), 동물(반려동물 발바닥 화상 등), 인체 영향 등 다양한 측면에서 균형 있게 조사한다. 정량적 데이터(피해 면적, 비용, 증가율 등)가 있다면 함께 기록하고, 출처(매체명, 날짜, URL)는 반드시 명시한다.</Hint>
+      <table className="ftbl">
+        <colgroup><col style={{width:'40px'}}/><col style={{width:'160px'}}/><col/><col style={{width:'180px'}}/></colgroup>
+        <thead><tr><th>#</th><th>문제 유형</th><th>구체적 사례 / 데이터</th><th>출처</th></tr></thead>
+        <tbody>
+          {p.cases.map((c, i) => (
+            <tr key={i}>
+              <td className="label">{i+1}</td>
+              <td><TextArea value={c.type} onChange={v => set(['part1','cases',i,'type'], v)} placeholder="예: 가로수 고사" /></td>
+              <td><TextArea value={c.detail} onChange={v => set(['part1','cases',i,'detail'], v)} placeholder="구체적 사례와 데이터..." /></td>
+              <td><TextArea value={c.source} onChange={v => set(['part1','cases',i,'source'], v)} placeholder="언론사, 날짜, URL" /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="h2-blue">1-2. 문제 정의</div>
+      <Hint>위의 사례들을 종합해서 "우리 모둠이 이번 프로젝트에서 해결하고 싶은 문제"를 한두 문장으로 정의하자. 이 문장이 우리 연구의 출발점이 된다.</Hint>
+      <table className="ftbl"><tbody><tr><td><TextArea value={p.problem_definition} onChange={v => set(['part1','problem_definition'], v)} big /></td></tr></tbody></table>
+
+      <BulletH>이상적인 제설제가 갖춰야 할 조건 (모둠 토의 후 작성)</BulletH>
+      <Hint>"좋은 제설제"란 어떤 조건을 만족해야 할까? 4~6개의 조건을 토의로 도출하자.</Hint>
+      <table className="ftbl">
+        <colgroup><col style={{width:'100px'}}/><col/></colgroup>
+        <tbody>
+          {p.ideal_conditions.map((c, i) => (
+            <tr key={i}>
+              <td className="label">조건 {i+1}</td>
+              <td><TextInput value={c} onChange={v => set(['part1','ideal_conditions',i], v)} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Part2Section({ data, set }) {
+  const p = data.part2;
+  const totalWeight = sumMatrixWeights(p.matrix);
+  return (
+    <div>
+      <div className="h1-blue">Part 2. 주제선정 및 연구 계획</div>
+      <div className="stage-goal">막연한 호기심을 "검증 가능한 연구 질문과 가설"로 좁히고, 어떻게 비교할지 정한다.</div>
+
+      <div className="h2-blue">2-1. 국내외에서 사용되는 제설제 종류 조사</div>
+      <Hint>최소 6종 이상 조사하자. 화학식과 가격은 인터넷 검색으로 확인. 환경 영향은 알려진 정보를 기재.</Hint>
+      <table className="ftbl">
+        <colgroup><col style={{width:'40px'}}/><col style={{width:'130px'}}/><col style={{width:'110px'}}/><col/><col style={{width:'90px'}}/><col/></colgroup>
+        <thead><tr><th>#</th><th>물질명</th><th>화학식</th><th>주 사용 국가/용도</th><th>가격 (원/kg)</th><th>알려진 환경 영향</th></tr></thead>
+        <tbody>
+          {p.substances.map((s, i) => (
+            <tr key={i}>
+              <td className="label">{i+1}</td>
+              <td><TextArea value={s.name} onChange={v => set(['part2','substances',i,'name'], v)} placeholder="예: 염화나트륨" /></td>
+              <td><TextArea value={s.formula} onChange={v => set(['part2','substances',i,'formula'], v)} placeholder="NaCl" /></td>
+              <td><TextArea value={s.country_use} onChange={v => set(['part2','substances',i,'country_use'], v)} /></td>
+              <td><TextArea value={s.price} onChange={v => set(['part2','substances',i,'price'], v)} /></td>
+              <td><TextArea value={s.env_impact} onChange={v => set(['part2','substances',i,'env_impact'], v)} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="h2-blue">2-2. 실험할 후보 물질 최종 선정</div>
+      <Hint>위 조사한 물질 중 우리가 실제로 실험할 4~5종을 선정하자. 다양성을 위해 '표준 후보(NaCl, CaCl₂)' + '친환경 후보(요소, CMA 등)'를 섞는 것을 추천.</Hint>
+      <table className="ftbl">
+        <colgroup><col style={{width:'90px'}}/><col style={{width:'180px'}}/><col/></colgroup>
+        <thead><tr><th>후보</th><th>선정 물질</th><th>선정 이유 (왜 이 물질을 비교 대상으로 골랐는가?)</th></tr></thead>
+        <tbody>
+          {p.candidates.map((c, i) => (
+            <tr key={i}>
+              <td className="label">후보 {String.fromCharCode(65+i)}</td>
+              <td><TextInput value={c.name} onChange={v => set(['part2','candidates',i,'name'], v)} /></td>
+              <td><TextArea value={c.reason} onChange={v => set(['part2','candidates',i,'reason'], v)} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="h2-blue">2-3. 평가 기준 매트릭스 설계</div>
+      <p className="small-note">실험을 마친 뒤 후보들을 "어떤 기준으로" 비교할지 미리 정해두자. 각 기준의 "중요도(가중치)"는 모둠이 토의해서 결정한다.</p>
+      <Hint>가중치의 합이 100%가 되도록 분배. 예: 효과 30%, 환경 30%, 경제성 20%, 안전성 20%</Hint>
+      <table className="ftbl">
+        <colgroup><col style={{width:'40px'}}/><col style={{width:'150px'}}/><col/><col style={{width:'100px'}}/></colgroup>
+        <thead><tr><th>#</th><th>평가 기준</th><th>측정 방법 / 판단 근거</th><th>가중치 (%)</th></tr></thead>
+        <tbody>
+          {p.matrix.map((r, i) => (
+            <tr key={i}>
+              <td className="label">{i+1}</td>
+              <td><TextInput value={r.criterion} onChange={v => set(['part2','matrix',i,'criterion'], v)} /></td>
+              <td><TextArea value={r.method} onChange={v => set(['part2','matrix',i,'method'], v)} /></td>
+              <td><TextInput value={r.weight} onChange={v => set(['part2','matrix',i,'weight'], v)} type="number" /></td>
+            </tr>
+          ))}
+          <tr>
+            <td className="label" colSpan={2}>합계</td>
+            <td className="label-left" style={{color:'#6b7280',fontStyle:'italic'}}>(반드시 100%가 되도록)</td>
+            <td className="calc-cell" style={{color: totalWeight === 100 ? '#16a34a' : '#dc2626'}}>{totalWeight}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <BulletH>가중치를 그렇게 정한 이유</BulletH>
+      <Hint>예: '우리는 환경 문제 해결이 가장 중요하다고 보아 환경 영향에 가장 높은 가중치를 두었다.'</Hint>
+      <table className="ftbl"><tbody><tr><td><TextArea value={p.weight_reasoning} onChange={v => set(['part2','weight_reasoning'], v)} big /></td></tr></tbody></table>
+
+      <div className="h2-blue">2-4. 연구 질문 (Research Question)</div>
+      <Hint>이 프로젝트를 통해 답하고 싶은 핵심 질문을 한 문장으로. 예시: "NaCl, CaCl₂, 요소, CMA 중 효과·환경·경제 세 기준을 균형 있게 만족시키는 최적의 제설제는 무엇이며, 단일 물질의 한계를 보완하는 혼합 처방을 제안할 수 있는가?"</Hint>
+      <table className="ftbl"><tbody><tr><td><TextArea value={p.research_question} onChange={v => set(['part2','research_question'], v)} big /></td></tr></tbody></table>
+
+      <div className="h2-blue">2-5. 가설 (Hypothesis)</div>
+      <Hint>연구 질문에 대한 "실험 전 우리 모둠의 예측"을 적어보자. 가설은 틀려도 괜찮다. 중요한 건 "왜 그렇게 예측했는가"의 근거다.</Hint>
+      <BulletH>(1) 가설 진술</BulletH>
+      <table className="ftbl"><tbody><tr><td><TextArea value={p.hypothesis_statement} onChange={v => set(['part2','hypothesis_statement'], v)} big /></td></tr></tbody></table>
+      <BulletH>(2) 가설의 근거 (왜 그렇게 예측했는가)</BulletH>
+      <table className="ftbl"><tbody><tr><td><TextArea value={p.hypothesis_basis} onChange={v => set(['part2','hypothesis_basis'], v)} big /></td></tr></tbody></table>
+    </div>
+  );
+}
+
+function Part3Section({ data, set }) {
+  return (
+    <div>
+      <div className="h1-blue">Part 3. 탐구활동</div>
+      <div className="stage-goal">데이터로 가설을 검증한다. 한 실험에서 "바꾸는 변인은 한 가지"라는 원칙을 꼭 지키자.</div>
+      <ExpA data={data.part3.expA} set={set} />
+      <ExpB data={data.part3.expB} set={set} />
+      <ExpC data={data.part3.expC} set={set} />
+      <ExpD1 data={data.part3.expD1} set={set} />
+      <ExpD2 data={data.part3.expD2} set={set} />
+      <ExpE data={data.part3.expE} set={set} />
+    </div>
+  );
+}
+
+function ExpA({ data, set }) {
+  return (
+    <div>
+      <div className="h2-blue">실험 A. 어는점 내림 효과 측정</div>
+      <BulletH>실험 목적</BulletH>
+      <Hint>예: "각 후보 제설제가 물의 어는점을 얼마나 낮추는지 정량적으로 측정하고, 이론값(어는점 내림 = i·Kf·m)과 비교한다."</Hint>
+      <table className="ftbl"><tbody><tr><td><TextArea value={data.purpose} onChange={v => set(['part3','expA','purpose'], v)} big /></td></tr></tbody></table>
+
+      <BulletH>변인 정리</BulletH>
+      <table className="ftbl">
+        <colgroup><col style={{width:'150px'}}/><col style={{width:'140px'}}/><col/></colgroup>
+        <thead><tr><th>변인의 종류</th><th>기호/이름</th><th>구체적인 내용</th></tr></thead>
+        <tbody>
+          <tr><td className="label">독립변인 (조작변인)</td><td><TextInput value={data.variables.independent.split('|')[0]||''} onChange={v => set(['part3','expA','variables','independent'], v + '|' + (data.variables.independent.split('|')[1]||''))} /></td><td><TextInput value={data.variables.independent.split('|')[1]||''} onChange={v => set(['part3','expA','variables','independent'], (data.variables.independent.split('|')[0]||'') + '|' + v)} placeholder="바꿀 한 가지" /></td></tr>
+          <tr><td className="label">종속변인</td><td><TextInput value={data.variables.dependent.split('|')[0]||''} onChange={v => set(['part3','expA','variables','dependent'], v + '|' + (data.variables.dependent.split('|')[1]||''))} /></td><td><TextInput value={data.variables.dependent.split('|')[1]||''} onChange={v => set(['part3','expA','variables','dependent'], (data.variables.dependent.split('|')[0]||'') + '|' + v)} placeholder="측정할 값" /></td></tr>
+          <tr><td className="label">통제변인</td><td><TextInput value={data.variables.controlled.split('|')[0]||''} onChange={v => set(['part3','expA','variables','controlled'], v + '|' + (data.variables.controlled.split('|')[1]||''))} /></td><td><TextArea value={data.variables.controlled.split('|')[1]||''} onChange={v => set(['part3','expA','variables','controlled'], (data.variables.controlled.split('|')[0]||'') + '|' + v)} placeholder="모두 똑같이 유지할 것들 (3가지 이상)" /></td></tr>
+        </tbody>
+      </table>
+
+      <BulletH>준비물</BulletH>
+      <table className="ftbl"><tbody><tr><td><TextArea value={data.materials} onChange={v => set(['part3','expA','materials'], v)} big /></td></tr></tbody></table>
+
+      <BulletH>실험 방법 (단계별로 자세히)</BulletH>
+      <Hint>다른 사람이 이 글만 보고도 똑같이 따라할 수 있을 만큼 자세히 적자. 농도, 용매 양, 측정 간격을 모두 명시.</Hint>
+      <table className="ftbl">
+        <colgroup><col style={{width:'90px'}}/><col/></colgroup>
+        <tbody>
+          {data.steps.map((s, i) => (
+            <tr key={i}><td className="label">Step {i+1}</td><td><TextArea value={s} onChange={v => set(['part3','expA','steps',i], v)} /></td></tr>
+          ))}
+        </tbody>
+      </table>
+
+      <BulletH>실험 데이터 — 시간에 따른 온도 변화 (단위: ℃)</BulletH>
+      <Hint>냉각욕(얼음+소금)에 용액을 담그고 60초(1분) 간격으로 온도를 기록. 과냉각 구간과 어는점 평탄 구간을 잘 관찰하자.</Hint>
+      <table className="ftbl">
+        <colgroup><col style={{width:'160px'}}/>{[0,1,2,3,4,5,6].map(i => <col key={i}/>)}</colgroup>
+        <thead><tr><th>후보 \ 시간(초)</th><th>0초</th><th>60</th><th>120</th><th>180</th><th>240</th><th>300</th><th>360</th></tr></thead>
+        <tbody>
+          <tr><td className="label-left">순수한 물</td>{data.temp_data.pure.map((v, i) => <td key={i}><TextInput value={v} onChange={x => set(['part3','expA','temp_data','pure',i], x)} type="number" /></td>)}</tr>
+          {['A','B','C','D'].map(k => (
+            <tr key={k}>
+              <td className="label-left" style={{padding:'4px'}}>
+                <div style={{fontWeight:'bold',fontSize:'12px'}}>후보 {k}</div>
+                <TextInput value={data.candidates_name[k]} onChange={v => set(['part3','expA','candidates_name',k], v)} placeholder="물질명" />
+              </td>
+              {data.temp_data[k].map((v, i) => <td key={i}><TextInput value={v} onChange={x => set(['part3','expA','temp_data',k,i], x)} type="number" /></td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <BulletH>냉각 곡선 (데이터 입력 시 자동 생성)</BulletH>
+      <CoolingCurveChart data={data.temp_data} names={data.candidates_name} />
+
+      <BulletH>이론값과 실험값 비교</BulletH>
+      <Hint>실험에서 측정한 어는점 내림 = (순수한 물의 어는점) − (용액의 어는점). 이론값은 i × Kf × m 공식으로 계산한다 (물의 Kf = 1.86, m: 몰랄 농도, i: 반트호프 인자).</Hint>
+      <table className="ftbl">
+        <colgroup><col style={{width:'150px'}}/><col/><col/></colgroup>
+        <thead><tr><th>후보</th><th>어는점 내림(이론값) (℃)</th><th>어는점 내림(실험값) (℃)</th></tr></thead>
+        <tbody>
+          {['A','B','C','D'].map(k => (
+            <tr key={k}>
+              <td className="label">후보 {k}</td>
+              <td><TextInput value={data.fp_compare[k].theoretical} onChange={v => set(['part3','expA','fp_compare',k,'theoretical'], v)} type="number" /></td>
+              <td><TextInput value={data.fp_compare[k].experimental} onChange={v => set(['part3','expA','fp_compare',k,'experimental'], v)} type="number" /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <BulletH>분석 및 해석</BulletH>
+      <Hint>어느 후보가 어는점 내림이 가장 컸는가? 이온화되는 입자 수와 어떤 관계가 보이는가? 이론값과 실험값의 차이가 있다면 그 원인은 무엇일까?</Hint>
+      <table className="ftbl"><tbody><tr><td><TextArea value={data.analysis} onChange={v => set(['part3','expA','analysis'], v)} huge /></td></tr></tbody></table>
+    </div>
+  );
+}
+
+function ExpB({ data, set }) {
+  return (
+    <div>
+      <div className="h2-blue">실험 B. 융해 효율 측정</div>
+      <Hint>어는점을 낮추는 것과 실제로 얼음을 "빠르게 녹이는 것"은 다르다. 같은 양의 얼음에 같은 양의 제설제를 뿌렸을 때 시간당 얼마나 녹는지 비교하자.</Hint>
+
+      <BulletH>실험 목적</BulletH>
+      <table className="ftbl"><tbody><tr><td><TextArea value={data.purpose} onChange={v => set(['part3','expB','purpose'], v)} big /></td></tr></tbody></table>
+
+      <BulletH>실험 방법 (단계별로 자세히)</BulletH>
+      <table className="ftbl">
+        <colgroup><col style={{width:'90px'}}/><col/></colgroup>
+        <tbody>
+          {data.steps.map((s, i) => (
+            <tr key={i}><td className="label">Step {i+1}</td><td><TextArea value={s} onChange={v => set(['part3','expB','steps',i], v)} /></td></tr>
+          ))}
+        </tbody>
+      </table>
+
+      <BulletH>실험 데이터 — 시간에 따른 융해된 물의 누적 질량 (단위: g)</BulletH>
+      <table className="ftbl">
+        <colgroup><col style={{width:'180px'}}/>{[0,1,2,3,4,5].map(i => <col key={i}/>)}</colgroup>
+        <thead><tr><th>후보 \ 시간</th><th>0분</th><th>2</th><th>4</th><th>6</th><th>8</th><th>10</th></tr></thead>
+        <tbody>
+          <tr><td className="label-left">대조군 (제설제 없음)</td>{data.melt_data.control.map((v, i) => <td key={i}><TextInput value={v} onChange={x => set(['part3','expB','melt_data','control',i], x)} type="number" /></td>)}</tr>
+          {['A','B','C','D'].map(k => (
+            <tr key={k}>
+              <td className="label-left">후보 {k}</td>
+              {data.melt_data[k].map((v, i) => <td key={i}><TextInput value={v} onChange={x => set(['part3','expB','melt_data',k,i], x)} type="number" /></td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <BulletH>그래프 (시간 vs 누적 융해량) — 자동 생성</BulletH>
+      <MeltingCurveChart data={data.melt_data} />
+
+      <BulletH>분석 — 어느 후보가 가장 효과적인가? 실험 A의 결과와 어떻게 비교되는가?</BulletH>
+      <table className="ftbl"><tbody><tr><td><TextArea value={data.analysis} onChange={v => set(['part3','expB','analysis'], v)} huge /></td></tr></tbody></table>
+    </div>
+  );
+}
+
+function ExpC({ data, set }) {
+  return (
+    <div>
+      <div className="h2-blue">실험 C. 용해열 측정</div>
+      <Hint>물에 녹일 때 발열인지 흡열인지 알아보자. 발열이면 융해 효율↑ (실험 B 결과 해석에 활용).</Hint>
+
+      <BulletH>실험 데이터 (열량은 자동 계산됨)</BulletH>
+      <p className="small-note">열량 계산 방법: 열량 = c · 물 질량 · 온도 변화 (물의 비열 c = 4.184 J/g·℃)</p>
+      <table className="ftbl">
+        <colgroup><col style={{width:'80px'}}/><col/><col/><col/><col/></colgroup>
+        <thead><tr><th>후보</th><th>용질 질량 (g)</th><th>물 질량 (g)</th><th>온도 변화 (℃)</th><th>열량 (자동 계산)</th></tr></thead>
+        <tbody>
+          {['A','B','C','D'].map(k => {
+            const d = data.data[k];
+            const heat = calcHeat(d.solute_mass, d.water_mass, d.temp_change);
+            return (
+              <tr key={k}>
+                <td className="label">후보 {k}</td>
+                <td><TextInput value={d.solute_mass} onChange={v => set(['part3','expC','data',k,'solute_mass'], v)} type="number" /></td>
+                <td><TextInput value={d.water_mass} onChange={v => set(['part3','expC','data',k,'water_mass'], v)} type="number" /></td>
+                <td><TextInput value={d.temp_change} onChange={v => set(['part3','expC','data',k,'temp_change'], v)} type="number" /></td>
+                <td className="calc-cell">{heat || '-'}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      <BulletH>해석 — 인터넷에서 "용해 엔탈피"를 검색해서 실험값과 비교해보자</BulletH>
+      <p className="small-note">[실험값과 이론값의 단위는 같게 변환]</p>
+      <table className="ftbl">
+        <colgroup><col style={{width:'80px'}}/><col/><col/></colgroup>
+        <thead><tr><th>후보</th><th>실험값</th><th>이론값</th></tr></thead>
+        <tbody>
+          {['A','B','C','D'].map(k => (
+            <tr key={k}>
+              <td className="label">후보 {k}</td>
+              <td><TextInput value={data.compare[k].experimental} onChange={v => set(['part3','expC','compare',k,'experimental'], v)} /></td>
+              <td><TextInput value={data.compare[k].theoretical} onChange={v => set(['part3','expC','compare',k,'theoretical'], v)} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ExpD1({ data, set }) {
+  return (
+    <div>
+      <div className="h2-blue">D-1. 식물 발아 영향 실험</div>
+      <Hint>동일한 씨앗(예: 무씨, 강낭콩)을 다양한 농도의 제설제 용액에 발아시켜 발아율과 생장을 비교한다.</Hint>
+
+      <BulletH>실험 설계</BulletH>
+      <table className="ftbl">
+        <colgroup><col style={{width:'180px'}}/><col/></colgroup>
+        <tbody>
+          <tr><td className="label-left">사용한 씨앗 종류</td><td><TextInput value={data.design.seed_type} onChange={v => set(['part3','expD1','design','seed_type'], v)} /></td></tr>
+          <tr><td className="label-left">그룹당 씨앗 개수</td><td><TextInput value={data.design.seed_count} onChange={v => set(['part3','expD1','design','seed_count'], v)} /></td></tr>
+          <tr><td className="label-left">테스트 농도</td><td><TextInput value={data.design.concentrations} onChange={v => set(['part3','expD1','design','concentrations'], v)} placeholder="예: 0% (대조군), 0.5%, 1%, 3%" /></td></tr>
+          <tr><td className="label-left">관찰 기간</td><td><TextInput value={data.design.duration} onChange={v => set(['part3','expD1','design','duration'], v)} /></td></tr>
+        </tbody>
+      </table>
+
+      <BulletH>발아율 측정 결과 (관찰 기간 종료 시점)</BulletH>
+      <table className="ftbl">
+        <colgroup><col style={{width:'80px'}}/><col/><col/><col/><col/><col style={{width:'130px'}}/></colgroup>
+        <thead><tr><th></th><th>0% (대조)</th><th>0.5%</th><th>1%</th><th>3%</th><th>비고</th></tr></thead>
+        <tbody>
+          {['A','B','C','D'].map(k => {
+            const r = data.results[k];
+            return (
+              <tr key={k}>
+                <td className="label">후보 {k}</td>
+                <td><TextInput value={r.c0} onChange={v => set(['part3','expD1','results',k,'c0'], v)} /></td>
+                <td><TextInput value={r.c05} onChange={v => set(['part3','expD1','results',k,'c05'], v)} /></td>
+                <td><TextInput value={r.c1} onChange={v => set(['part3','expD1','results',k,'c1'], v)} /></td>
+                <td><TextInput value={r.c3} onChange={v => set(['part3','expD1','results',k,'c3'], v)} /></td>
+                <td><TextArea value={r.note} onChange={v => set(['part3','expD1','results',k,'note'], v)} /></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="small-note">※ 발아율(%) = (발아한 씨앗 수 ÷ 전체 씨앗 수) × 100</p>
+
+      <BulletH>관찰 사진 및 스케치</BulletH>
+      <div className="col-grid cols-3">
+        <div>
+          <div style={{fontSize:'13px',fontWeight:'600',marginBottom:'4px',textAlign:'center'}}>실험 시작 (Day 0)</div>
+          <ImageUpload value={data.photos.day0} onChange={v => set(['part3','expD1','photos','day0'], v)} label="Day 0 사진" />
+        </div>
+        <div>
+          <div style={{fontSize:'13px',fontWeight:'600',marginBottom:'4px',textAlign:'center'}}>실험 중 (Day 3)</div>
+          <ImageUpload value={data.photos.day3} onChange={v => set(['part3','expD1','photos','day3'], v)} label="Day 3 사진" />
+        </div>
+        <div>
+          <div style={{fontSize:'13px',fontWeight:'600',marginBottom:'4px',textAlign:'center'}}>관찰 종료 시점</div>
+          <ImageUpload value={data.photos.end} onChange={v => set(['part3','expD1','photos','end'], v)} label="종료 시점 사진" />
+        </div>
+      </div>
+
+      <BulletH>결과 분석 — 어느 후보가 식물에 가장 해로운가? 농도와의 관계는?</BulletH>
+      <table className="ftbl"><tbody><tr><td><TextArea value={data.analysis} onChange={v => set(['part3','expD1','analysis'], v)} huge /></td></tr></tbody></table>
+    </div>
+  );
+}
+
+function ExpD2({ data, set }) {
+  return (
+    <div>
+      <div className="h2-blue">D-2. 금속 부식 실험</div>
+      <Hint>철못 또는 알루미늄 조각을 같은 농도의 제설제 용액에 침지하고 3~5일 후 변화를 관찰한다.</Hint>
+
+      <BulletH>실험 설계</BulletH>
+      <table className="ftbl">
+        <colgroup><col style={{width:'140px'}}/><col/></colgroup>
+        <tbody>
+          <tr><td className="label-left">사용 금속</td><td><TextInput value={data.design.metal} onChange={v => set(['part3','expD2','design','metal'], v)} /></td></tr>
+          <tr><td className="label-left">용액 농도</td><td><TextInput value={data.design.concentration} onChange={v => set(['part3','expD2','design','concentration'], v)} /></td></tr>
+          <tr><td className="label-left">침지 기간</td><td><TextInput value={data.design.duration} onChange={v => set(['part3','expD2','design','duration'], v)} /></td></tr>
+        </tbody>
+      </table>
+
+      <BulletH>부식 측정 결과</BulletH>
+      <table className="ftbl">
+        <colgroup><col style={{width:'150px'}}/><col/><col/><col/></colgroup>
+        <thead><tr><th>후보</th><th>실험 전 질량 (g)</th><th>실험 후 질량 (g)</th><th>부식 정도 (1~5점)</th></tr></thead>
+        <tbody>
+          {[['control','대조군 (증류수)'],['A','후보 A'],['B','후보 B'],['C','후보 C'],['D','후보 D']].map(([k,label]) => (
+            <tr key={k}>
+              <td className="label-left">{label}</td>
+              <td><TextInput value={data.results[k].mass_before} onChange={v => set(['part3','expD2','results',k,'mass_before'], v)} type="number" /></td>
+              <td><TextInput value={data.results[k].mass_after} onChange={v => set(['part3','expD2','results',k,'mass_after'], v)} type="number" /></td>
+              <td><TextInput value={data.results[k].corrosion} onChange={v => set(['part3','expD2','results',k,'corrosion'], v)} type="number" /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <BulletH>관찰 사진 (실험 전 / 실험 후)</BulletH>
+      <div className="col-grid cols-2">
+        <div>
+          <div style={{fontSize:'13px',fontWeight:'600',marginBottom:'4px',textAlign:'center'}}>실험 전</div>
+          <ImageUpload value={data.photos.before} onChange={v => set(['part3','expD2','photos','before'], v)} label="실험 전 사진" />
+        </div>
+        <div>
+          <div style={{fontSize:'13px',fontWeight:'600',marginBottom:'4px',textAlign:'center'}}>실험 후</div>
+          <ImageUpload value={data.photos.after} onChange={v => set(['part3','expD2','photos','after'], v)} label="실험 후 사진" />
+        </div>
+      </div>
+
+      <BulletH>분석 — 어떤 화합물이 가장 부식을 잘 일으키는가? 그 이유는?</BulletH>
+      <table className="ftbl"><tbody><tr><td><TextArea value={data.analysis} onChange={v => set(['part3','expD2','analysis'], v)} huge /></td></tr></tbody></table>
+    </div>
+  );
+}
+
+function ExpE({ data, set }) {
+  return (
+    <div>
+      <div className="h2-blue">실험 E. (심화) 혼합 제설제 설계</div>
+      <p className="small-note" style={{color:'#92400e',background:'#fffbeb',padding:'8px 12px',borderRadius:'4px',fontStyle:'italic'}}>✨ 이 실험은 선택이지만, 완료하면 산출물의 수준이 훨씬 올라간다. 실험 A~D 결과를 바탕으로 "단일 물질의 약점을 보완하는 혼합 제설제"를 직접 설계하고 검증한다.</p>
+
+      <BulletH>(1) 실험 A~D를 종합한 "단일 물질의 한계"</BulletH>
+      <table className="ftbl"><tbody><tr><td><TextArea value={data.single_limits} onChange={v => set(['part3','expE','single_limits'], v)} huge /></td></tr></tbody></table>
+
+      <BulletH>(2) 우리 모둠이 제안하는 혼합 처방</BulletH>
+      <table className="ftbl">
+        <colgroup><col style={{width:'180px'}}/><col style={{width:'140px'}}/><col/></colgroup>
+        <thead><tr><th>성분</th><th>혼합 비율 (질량%)</th><th>이 성분을 선택한 이유</th></tr></thead>
+        <tbody>
+          {data.recipe.map((r, i) => (
+            <tr key={i}>
+              <td><TextInput value={r.component} onChange={v => set(['part3','expE','recipe',i,'component'], v)} /></td>
+              <td><TextInput value={r.ratio} onChange={v => set(['part3','expE','recipe',i,'ratio'], v)} type="number" /></td>
+              <td><TextArea value={r.reason} onChange={v => set(['part3','expE','recipe',i,'reason'], v)} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <BulletH>(3) 혼합 제설제 검증 결과 (실험 A, B, D-1을 다시 적용)</BulletH>
+      <table className="ftbl">
+        <colgroup><col style={{width:'200px'}}/><col/><col/><col/></colgroup>
+        <thead><tr><th>측정 항목</th><th>최고 단일 후보 값</th><th>우리 혼합 처방 값</th><th>개선 여부</th></tr></thead>
+        <tbody>
+          {[['fp','어는점 내림 (℃)'],['melt','10분 후 융해된 물 (g)'],['germ','식물 발아율 (%, 1% 농도)']].map(([k, label]) => (
+            <tr key={k}>
+              <td className="label-left">{label}</td>
+              <td><TextInput value={data.verification[k].best} onChange={v => set(['part3','expE','verification',k,'best'], v)} /></td>
+              <td><TextInput value={data.verification[k].mixed} onChange={v => set(['part3','expE','verification',k,'mixed'], v)} /></td>
+              <td><TextInput value={data.verification[k].improvement} onChange={v => set(['part3','expE','verification',k,'improvement'], v)} placeholder="개선 / 비슷 / 악화" /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <BulletH>(4) 결론</BulletH>
+      <table className="ftbl"><tbody><tr><td><TextArea value={data.conclusion} onChange={v => set(['part3','expE','conclusion'], v)} huge /></td></tr></tbody></table>
+    </div>
+  );
+}
+
+function Part4Section({ data, set }) {
+  const p = data.part4;
+  const totalScoringWeight = sumWeights(p.scoring);
+  return (
+    <div>
+      <div className="h1-blue">Part 4. 결과</div>
+      <div className="stage-goal">실험 A~E의 데이터를 한 곳에 모아 후보들을 "한눈에 비교 가능한 형태"로 만든다.</div>
+
+      <div className="h2-blue">4-1. 실험 종합 결과표</div>
+      <table className="ftbl">
+        <colgroup><col style={{width:'200px'}}/><col/><col/><col/><col/><col/></colgroup>
+        <thead><tr><th>측정 항목</th><th>후보 A</th><th>후보 B</th><th>후보 C</th><th>후보 D</th><th>혼합처방</th></tr></thead>
+        <tbody>
+          {[
+            ['fp', '어는점 내림 (℃)'],
+            ['melt', '10분 후 융해 질량 (g)'],
+            ['heat', '용해열 (온도 변화)'],
+            ['germ', '식물 발아율 (%, 1%)'],
+            ['corrosion', '금속 부식 점수 (1~5)'],
+            ['price', '가격 (원/kg)'],
+          ].map(([k, label]) => (
+            <tr key={k}>
+              <td className="label-left">{label}</td>
+              {['A','B','C','D','mixed'].map(c => (
+                <td key={c}><TextInput value={p.summary[k][c]} onChange={v => set(['part4','summary',k,c], v)} /></td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="h2-blue">4-2. 평가 매트릭스 점수화</div>
+      <p className="small-note">각 측정값을 1~5점 척도로 환산하자. (5점이 가장 좋음). 점수화 기준은 모둠이 토의해서 정한다.</p>
+      <Hint>예시 점수화 기준 — 어는점 내림: 5℃ 이상 = 5점 / 3~5℃ = 4점 / 1~3℃ = 3점 / 0.5~1℃ = 2점 / 0.5℃ 미만 = 1점</Hint>
+      <table className="ftbl">
+        <colgroup><col style={{width:'180px'}}/><col style={{width:'90px'}}/><col/><col/><col/><col/><col/></colgroup>
+        <thead><tr><th>평가 기준</th><th>가중치 (%)</th><th>후보 A</th><th>후보 B</th><th>후보 C</th><th>후보 D</th><th>혼합처방</th></tr></thead>
+        <tbody>
+          {[
+            ['fp', '어는점 내림 효과'],
+            ['melt', '융해 효율'],
+            ['env', '환경 영향 (식물+금속)'],
+            ['economic', '경제성'],
+          ].map(([k, label]) => (
+            <tr key={k}>
+              <td className="label-left">{label}</td>
+              <td><TextInput value={p.scoring[k].weight} onChange={v => set(['part4','scoring',k,'weight'], v)} type="number" /></td>
+              {['A','B','C','D','mixed'].map(c => (
+                <td key={c}><TextInput value={p.scoring[k][c]} onChange={v => set(['part4','scoring',k,c], v)} type="number" /></td>
+              ))}
+            </tr>
+          ))}
+          <tr>
+            <td className="label-left">가중 평균 점수 (자동 계산)</td>
+            <td className="calc-cell" style={{color: totalScoringWeight === 100 ? '#16a34a' : '#dc2626'}}>{totalScoringWeight}</td>
+            {['A','B','C','D','mixed'].map(c => (
+              <td key={c} className="calc-cell">{calcWeightedAverage(p.scoring, c) || '-'}</td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+      <p className="small-note">※ 가중 평균 = Σ (기준 점수 × 가중치) ÷ 100</p>
+
+      <div className="h2-blue">4-3. 결과 시각화 (자동 생성)</div>
+      <Hint>4축(어는점 내림·융해·환경·경제) 레이더 차트로 후보들을 한 눈에 비교하자. 각 축은 1~5점. 4-2의 점수가 입력되면 자동으로 그려진다.</Hint>
+      <RadarChart scoring={p.scoring} />
+    </div>
+  );
+}
+
+function Part5Section({ data, set }) {
+  const p = data.part5;
+  return (
+    <div>
+      <div className="h1-blue">Part 5. 결론 및 제안</div>
+      <div className="stage-goal">데이터에서 답을 끌어내고, 그 답이 사회에 어떻게 쓰일지 제안한다.</div>
+
+      <div className="h2-blue">5-1. 우리 모둠이 선정한 최적 제설제</div>
+      <BulletH>(1) 최적 제설제 선정 결과</BulletH>
+      <Hint>예: "우리 모둠은 ○○ 비율의 NaCl + CMA 혼합 처방을 최적 제설제로 선정한다."</Hint>
+      <table className="ftbl"><tbody><tr><td><TextArea value={p.optimal} onChange={v => set(['part5','optimal'], v)} big /></td></tr></tbody></table>
+
+      <BulletH>(2) 선정 근거 — 4-2의 평가 점수와 4-3의 시각화를 인용하여 작성</BulletH>
+      <table className="ftbl"><tbody><tr><td><TextArea value={p.optimal_basis} onChange={v => set(['part5','optimal_basis'], v)} huge /></td></tr></tbody></table>
+
+      <div className="h2-blue">5-2. 사용 용도별 추천</div>
+      <Hint>"하나의 답"이 아니라 "상황에 따라 다른 답"이 더 가치 있는 결론이다.</Hint>
+      <table className="ftbl">
+        <colgroup><col style={{width:'200px'}}/><col style={{width:'180px'}}/><col/></colgroup>
+        <thead><tr><th>사용 환경</th><th>추천 제설제</th><th>추천 이유</th></tr></thead>
+        <tbody>
+          {p.use_cases.map((uc, i) => (
+            <tr key={i}>
+              <td className="label-left">{uc.env}</td>
+              <td><TextInput value={uc.rec} onChange={v => set(['part5','use_cases',i,'rec'], v)} /></td>
+              <td><TextArea value={uc.reason} onChange={v => set(['part5','use_cases',i,'reason'], v)} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="h2-blue">5-3. 가설 검증 결과</div>
+      <Hint>2-5에서 세운 가설을 다시 가져와서, 실험 결과가 이를 "지지하는가 / 부분 지지하는가 / 반증하는가"를 판단.</Hint>
+      <table className="ftbl">
+        <colgroup><col style={{width:'150px'}}/><col/></colgroup>
+        <tbody>
+          <tr>
+            <td className="label-left">우리의 가설 (2-5)</td>
+            <td style={{padding:'8px 12px',background:'#f9fafb',fontStyle:'italic',color:'#4b5563'}}>{data.part2.hypothesis_statement || '— 2-5에서 가설을 입력하세요 —'}</td>
+          </tr>
+          <tr>
+            <td className="label-left">검증 결과</td>
+            <td className="radio-grp">
+              {[['supported','지지됨'],['partial','부분 지지'],['refuted','반증됨']].map(([val, label]) => (
+                <label key={val}>
+                  <input type="radio" name="hyp-verify" value={val} checked={p.hyp_verification.result === val} onChange={() => set(['part5','hyp_verification','result'], val)} /> {label}
+                </label>
+              ))}
+            </td>
+          </tr>
+          <tr>
+            <td className="label-left">판단 근거</td>
+            <td><TextArea value={p.hyp_verification.basis} onChange={v => set(['part5','hyp_verification','basis'], v)} big /></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div className="h2-blue">5-4. 연구의 한계</div>
+      <Hint>우리 실험이 다 보여주지 못한 것, 실제 환경과 다른 점, 측정의 부정확성 등을 정직하게 적자. 한계를 인정하는 게 가장 과학적인 태도다.</Hint>
+      <table className="ftbl"><tbody><tr><td><TextArea value={p.limitations} onChange={v => set(['part5','limitations'], v)} huge /></td></tr></tbody></table>
+
+      <div className="h2-blue">5-5. 후속 연구 제안</div>
+      <Hint>이 프로젝트를 더 발전시킨다면 어떤 연구를 해보고 싶은가? 2~3개 제안.</Hint>
+      <table className="ftbl"><tbody><tr><td><TextArea value={p.future_research} onChange={v => set(['part5','future_research'], v)} huge /></td></tr></tbody></table>
+    </div>
+  );
+}
+
+function Part6Section({ data, set }) {
+  return (
+    <div>
+      <div className="h1-blue">Part 6. 참고문헌</div>
+      <p className="small-note">조사·인용한 자료를 모두 정리한다. 영재원 산출물에서는 출처 정리가 평가의 큰 부분이다.</p>
+      <Hint>형식 예시 — 단행본: 저자(출판년도). 책 제목. 출판사. / 논문: 저자(년도). 논문 제목. 학술지명, 권(호), 쪽수. / 웹: 저자/기관 (년도). 제목. URL [접속일]</Hint>
+      <table className="ftbl">
+        <colgroup><col style={{width:'50px'}}/><col/></colgroup>
+        <tbody>
+          {data.references.map((r, i) => (
+            <tr key={i}>
+              <td className="label">{i+1}</td>
+              <td><TextArea value={r} onChange={v => set(['references',i], v)} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Part7Section({ data, set }) {
+  const p = data.part7;
+  const groupCriteria = [
+    ['active', '모둠원들이 적극적으로 의견을 냈다'],
+    ['fair', '역할 분담이 공평했다'],
+    ['participate', '실험에 모두 참여했다'],
+    ['helping', '어려운 일이 있을 때 서로 도왔다'],
+    ['honest', '데이터 기록이 정확하고 정직했다'],
+    ['contribute', '보고서·산출물 작성에 모두 기여했다'],
+  ];
+  return (
+    <div>
+      <div className="h1-blue">Part 7. 자기 평가 및 모둠 평가</div>
+
+      <div className="h2-blue">7-1. 자기 평가</div>
+      <Hint>이번 프로젝트에서 자신이 한 일과 배운 점을 솔직하게 적어보자.</Hint>
+      <table className="ftbl">
+        <colgroup><col style={{width:'200px'}}/><col/></colgroup>
+        <tbody>
+          <tr><td className="label-left">이름</td><td><TextInput value={p.self.name} onChange={v => set(['part7','self','name'], v)} /></td></tr>
+          <tr><td className="label-left">내가 모둠에서 맡은 역할</td><td><TextInput value={p.self.role} onChange={v => set(['part7','self','role'], v)} /></td></tr>
+          <tr><td className="label-left">가장 잘했다고 생각하는 부분</td><td><TextArea value={p.self.did_well} onChange={v => set(['part7','self','did_well'], v)} /></td></tr>
+          <tr><td className="label-left">더 잘했어야 했던 부분</td><td><TextArea value={p.self.could_improve} onChange={v => set(['part7','self','could_improve'], v)} /></td></tr>
+          <tr><td className="label-left">이 프로젝트로 새로 배운 것</td><td><TextArea value={p.self.learned} onChange={v => set(['part7','self','learned'], v)} big /></td></tr>
+        </tbody>
+      </table>
+
+      <div className="h2-blue">7-2. 모둠 평가</div>
+      <Hint>우리 모둠의 협업이 어땠는지 평가해보자.</Hint>
+      <table className="ftbl">
+        <thead><tr><th>평가 항목</th><th>매우 좋음</th><th>좋음</th><th>보통</th><th>미흡</th></tr></thead>
+        <tbody>
+          {groupCriteria.map(([k, label]) => (
+            <tr key={k}>
+              <td className="label-left">{label}</td>
+              {['excellent','good','fair','poor'].map(val => (
+                <td key={val} style={{textAlign:'center',padding:'10px'}}>
+                  <input type="radio" name={'grp-'+k} value={val} checked={p.group_eval[k] === val} onChange={() => set(['part7','group_eval',k], val)} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <BulletH>우리 모둠의 자랑스러운 점</BulletH>
+      <table className="ftbl"><tbody><tr><td><TextArea value={p.proud} onChange={v => set(['part7','proud'], v)} big /></td></tr></tbody></table>
+
+      <BulletH>다음 프로젝트에서 개선하고 싶은 점</BulletH>
+      <table className="ftbl"><tbody><tr><td><TextArea value={p.improvement} onChange={v => set(['part7','improvement'], v)} big /></td></tr></tbody></table>
+    </div>
+  );
+}
+
+// ===================================================================
+// DOCX GENERATION
+// ===================================================================
+const PRIMARY_HEX = '1F4E79';
+const GRAY_HEX = 'F2F2F2';
+const BORDER_HEX = '999999';
+
+function D() { return window.docx; }
+
+function mTR(text, opts = {}) {
+  return new (D().TextRun)({
+    text: String(text || ''),
+    bold: !!opts.bold,
+    italics: !!opts.italics,
+    color: opts.color || '000000',
+    size: opts.size || 20,
+    font: 'Malgun Gothic',
+  });
+}
+
+function mP(children, opts = {}) {
+  const { Paragraph, AlignmentType } = D();
+  const cfg = {
+    children: Array.isArray(children) ? children : [children],
+    spacing: { before: opts.before || 0, after: opts.after == null ? 80 : opts.after, line: opts.line || 280 },
+  };
+  if (opts.alignment === 'center') cfg.alignment = AlignmentType.CENTER;
+  if (opts.alignment === 'right') cfg.alignment = AlignmentType.RIGHT;
+  if (opts.pageBreakBefore) cfg.pageBreakBefore = true;
+  if (opts.shading) cfg.shading = opts.shading;
+  if (opts.border) cfg.border = opts.border;
+  return new Paragraph(cfg);
+}
+
+function mH1(text) {
+  const { ShadingType } = D();
+  return mP(mTR(text, { bold: true, color: 'FFFFFF', size: 32 }), {
+    shading: { type: ShadingType.CLEAR, fill: PRIMARY_HEX, color: 'auto' },
+    before: 480, after: 240,
+  });
+}
+function mH2(text) {
+  const { BorderStyle } = D();
+  return mP(mTR(text, { bold: true, color: PRIMARY_HEX, size: 26 }), {
+    before: 320, after: 160,
+    border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: PRIMARY_HEX, space: 1 } },
+  });
+}
+function mH3(text) {
+  return mP(mTR(text, { bold: true, color: PRIMARY_HEX, size: 22 }), { before: 200, after: 100 });
+}
+function mHint(text) { return mP(mTR('💡  ' + text, { italics: true, color: '7F7F7F', size: 18 }), { before: 60, after: 80 }); }
+function mBullet(text) { return mP(mTR('▶ ' + text, { bold: true, color: '333333', size: 22 }), { before: 200, after: 100 }); }
+function mNote(text) { return mP(mTR(text, { italics: true, color: '595959', size: 18 }), { before: 40, after: 120 }); }
+function mTxt(text) { return mP(mTR(text)); }
+
+function mC(content, opts = {}) {
+  const { TableCell, ShadingType, BorderStyle, WidthType, VerticalAlign } = D();
+  const b = { style: BorderStyle.SINGLE, size: 4, color: BORDER_HEX };
+  const cfg = {
+    children: Array.isArray(content) ? content : [content],
+    borders: { top: b, bottom: b, left: b, right: b },
+    margins: { top: 80, bottom: 80, left: 120, right: 120 },
+    verticalAlign: VerticalAlign.CENTER,
+  };
+  if (opts.width) cfg.width = { size: opts.width, type: WidthType.DXA };
+  if (opts.shading) cfg.shading = { type: ShadingType.CLEAR, fill: opts.shading, color: 'auto' };
+  if (opts.colSpan) cfg.columnSpan = opts.colSpan;
+  return new TableCell(cfg);
+}
+function mHC(text, w) { return mC(mP(mTR(text, { bold: true, color: 'FFFFFF' }), { alignment: 'center', after: 0 }), { width: w, shading: PRIMARY_HEX }); }
+function mLC(text, w, opts = {}) { return mC(mP(mTR(text, { bold: true }), { alignment: opts.left ? 'left' : 'center', after: 0 }), { width: w, shading: GRAY_HEX, colSpan: opts.colSpan }); }
+function mDC(text, w) {
+  const lines = String(text || '').split('\n');
+  return mC(lines.map(l => mP(mTR(l), { after: 0 })), { width: w });
+}
+function mT(rows, totalW = 9360) {
+  const { Table, WidthType } = D();
+  return new Table({ rows, width: { size: totalW, type: WidthType.DXA } });
+}
+function mR(cells) { return new (D().TableRow)({ children: cells }); }
+
+function dataURLToBytes(dataURL) {
+  if (!dataURL) return null;
+  try {
+    const base64 = dataURL.split(',')[1];
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  } catch (e) { return null; }
+}
+function mImg(dataURL, w = 400, h = 280) {
+  const bytes = dataURLToBytes(dataURL);
+  if (!bytes) return null;
+  const { ImageRun, Paragraph, AlignmentType } = D();
+  return new Paragraph({
+    children: [new ImageRun({ data: bytes, transformation: { width: w, height: h } })],
+    alignment: AlignmentType.CENTER,
+  });
+}
+
+function buildDoc(data, chartImgs) {
+  const { Document, Packer } = D();
+  const k = [];
+
+  // Cover
+  k.push(mP(mTR('영재원 프로젝트 산출물', { color: PRIMARY_HEX, size: 26 }), { alignment: 'center', before: 480, after: 240 }));
+  k.push(mP(mTR('친환경 제설제를 찾아라!', { bold: true, color: PRIMARY_HEX, size: 60 }), { alignment: 'center', after: 120 }));
+  k.push(mP(mTR('— 다양한 물질의 제설 효과와 환경 영향 비교 탐구 —', { italics: true, color: '595959', size: 22 }), { alignment: 'center', after: 480 }));
+
+  const c = data.cover;
+  k.push(mT([
+    mR([mLC('과 정', 1800, {left:true}), mDC('중등과학심화', 7560)]),
+    mR([mLC('모 둠 명', 1800, {left:true}), mDC(c.group_name, 7560)]),
+    mR([mLC('모둠 구성원', 1800, {left:true}), mDC(c.members, 7560)]),
+    mR([mLC('지도 교사', 1800, {left:true}), mDC(c.teacher, 7560)]),
+    mR([mLC('연구 기간', 1800, {left:true}), mDC(c.period, 7560)]),
+    mR([mLC('제 출 일', 1800, {left:true}), mDC(c.submission_date, 7560)]),
+  ]));
+
+  k.push(mP(mTR('연구 요약 (Abstract)', { bold: true, size: 28, color: PRIMARY_HEX }), { before: 480, after: 160 }));
+  k.push(mHint('프로젝트가 모두 끝난 뒤 마지막에 작성하자. 5~7문장으로 "무엇을, 왜, 어떻게, 결과, 결론" 순서로 요약한다.'));
+  k.push(mT([mR([mDC(data.abstract, 9360)])]));
+
+  // Part 1
+  k.push(mP(mTR(''), { pageBreakBefore: true, after: 0 }));
+  k.push(mH1('Part 1.  문제인식'));
+  k.push(mNote('이 단계의 목표: "왜 우리가 이 연구를 해야 하는가"에 대한 우리 모둠의 답을 만든다.'));
+  k.push(mH2('1-1.  우리 주변의 "제설제 문제" 사례 조사'));
+  k.push(mHint('뉴스, 환경부·국립환경과학원 자료, 논문, 사진 등을 활용해 제설제로 인한 실제 피해 사례를 조사하자. 가능하면 환경·시설·동물·인체 영향 등 다양한 측면에서 균형 있게 조사한다. 정량적 데이터가 있다면 함께 기록하고, 출처는 반드시 명시한다.'));
+  const cR = [mR([mHC('#', 600), mHC('문제 유형', 2400), mHC('구체적 사례 / 데이터', 4660), mHC('출처', 1700)])];
+  data.part1.cases.forEach((cs, i) => cR.push(mR([mLC(String(i+1), 600), mDC(cs.type, 2400), mDC(cs.detail, 4660), mDC(cs.source, 1700)])));
+  k.push(mT(cR));
+
+  k.push(mH2('1-2.  문제 정의'));
+  k.push(mHint('위의 사례들을 종합해서 "우리 모둠이 이번 프로젝트에서 해결하고 싶은 문제"를 한두 문장으로 정의하자.'));
+  k.push(mT([mR([mDC(data.part1.problem_definition, 9360)])]));
+
+  k.push(mBullet('이상적인 제설제가 갖춰야 할 조건'));
+  k.push(mHint('"좋은 제설제"란 어떤 조건을 만족해야 할까? 4~6개의 조건을 토의로 도출하자.'));
+  k.push(mT(data.part1.ideal_conditions.map((cd, i) => mR([mLC('조건 ' + (i+1), 1400, {left:true}), mDC(cd, 7960)]))));
+
+  // Part 2
+  k.push(mP(mTR(''), { pageBreakBefore: true, after: 0 }));
+  k.push(mH1('Part 2.  주제선정 및 연구 계획'));
+  k.push(mNote('막연한 호기심을 "검증 가능한 연구 질문과 가설"로 좁히고, 어떻게 비교할지 정한다.'));
+
+  k.push(mH2('2-1.  국내외에서 사용되는 제설제 종류 조사'));
+  k.push(mHint('최소 6종 이상 조사하자. 화학식과 가격은 인터넷 검색으로 확인. 환경 영향은 알려진 정보를 기재.'));
+  const sR = [mR([mHC('#', 500), mHC('물질명', 1800), mHC('화학식', 1300), mHC('주 사용 국가/용도', 2160), mHC('가격 (원/kg)', 1200), mHC('알려진 환경 영향', 2400)])];
+  data.part2.substances.forEach((s, i) => sR.push(mR([mLC(String(i+1), 500), mDC(s.name, 1800), mDC(s.formula, 1300), mDC(s.country_use, 2160), mDC(s.price, 1200), mDC(s.env_impact, 2400)])));
+  k.push(mT(sR));
+
+  k.push(mH2('2-2.  실험할 후보 물질 최종 선정'));
+  k.push(mHint("위 조사한 물질 중 우리가 실제로 실험할 4~5종을 선정하자."));
+  const ccR = [mR([mHC('후보', 1200), mHC('선정 물질', 2400), mHC('선정 이유', 5760)])];
+  data.part2.candidates.forEach((cd, i) => ccR.push(mR([mLC('후보 ' + String.fromCharCode(65+i), 1200), mDC(cd.name, 2400), mDC(cd.reason, 5760)])));
+  k.push(mT(ccR));
+
+  k.push(mH2('2-3.  평가 기준 매트릭스 설계'));
+  k.push(mTxt('실험을 마친 뒤 후보들을 "어떤 기준으로" 비교할지 미리 정해두자. 각 기준의 "중요도(가중치)"는 모둠이 토의해서 결정한다.'));
+  k.push(mHint('가중치의 합이 100%가 되도록 분배.'));
+  const mR_ = [mR([mHC('#', 500), mHC('평가 기준', 2200), mHC('측정 방법 / 판단 근거', 5160), mHC('가중치 (%)', 1500)])];
+  data.part2.matrix.forEach((m, i) => mR_.push(mR([mLC(String(i+1), 500), mDC(m.criterion, 2200), mDC(m.method, 5160), mDC(m.weight, 1500)])));
+  mR_.push(mR([mLC('합계', 2700, {left:true, colSpan: 2}), mDC('(반드시 100%가 되도록)', 5160), mLC(String(sumMatrixWeights(data.part2.matrix)), 1500)]));
+  k.push(mT(mR_));
+
+  k.push(mBullet('가중치를 그렇게 정한 이유'));
+  k.push(mT([mR([mDC(data.part2.weight_reasoning, 9360)])]));
+
+  k.push(mH2('2-4.  연구 질문 (Research Question)'));
+  k.push(mT([mR([mDC(data.part2.research_question, 9360)])]));
+
+  k.push(mH2('2-5.  가설 (Hypothesis)'));
+  k.push(mBullet('(1) 가설 진술'));
+  k.push(mT([mR([mDC(data.part2.hypothesis_statement, 9360)])]));
+  k.push(mBullet('(2) 가설의 근거 (왜 그렇게 예측했는가)'));
+  k.push(mT([mR([mDC(data.part2.hypothesis_basis, 9360)])]));
+
+  // Part 3
+  k.push(mP(mTR(''), { pageBreakBefore: true, after: 0 }));
+  k.push(mH1('Part 3.  탐구활동'));
+  k.push(mNote('데이터로 가설을 검증한다. 한 실험에서 "바꾸는 변인은 한 가지"라는 원칙을 꼭 지키자.'));
+
+  // Exp A
+  const A = data.part3.expA;
+  k.push(mH2('실험 A.  어는점 내림 효과 측정'));
+  k.push(mBullet('실험 목적'));
+  k.push(mT([mR([mDC(A.purpose, 9360)])]));
+  k.push(mBullet('변인 정리'));
+  const vp = (s) => { const a = (s||'').split('|'); return [a[0]||'', a[1]||'']; };
+  const [iSym, iDesc] = vp(A.variables.independent);
+  const [dSym, dDesc] = vp(A.variables.dependent);
+  const [cSym, cDesc] = vp(A.variables.controlled);
+  k.push(mT([
+    mR([mHC('변인의 종류', 2200), mHC('기호/이름', 2000), mHC('구체적인 내용', 5160)]),
+    mR([mLC('독립변인 (조작변인)', 2200, {left:true}), mDC(iSym, 2000), mDC(iDesc, 5160)]),
+    mR([mLC('종속변인', 2200, {left:true}), mDC(dSym, 2000), mDC(dDesc, 5160)]),
+    mR([mLC('통제변인', 2200, {left:true}), mDC(cSym, 2000), mDC(cDesc, 5160)]),
+  ]));
+  k.push(mBullet('준비물'));
+  k.push(mT([mR([mDC(A.materials, 9360)])]));
+  k.push(mBullet('실험 방법 (단계별로 자세히)'));
+  k.push(mT(A.steps.map((s, i) => mR([mLC('Step ' + (i+1), 1200, {left:true}), mDC(s, 8160)]))));
+
+  k.push(mBullet('실험 데이터 — 시간에 따른 온도 변화 (단위: ℃)'));
+  k.push(mHint('냉각욕(얼음+소금)에 용액을 담그고 60초(1분) 간격으로 온도를 기록.'));
+  const tH = [mHC('후보 \\ 시간(초)', 2200), mHC('0초', 1023), mHC('60', 1023), mHC('120', 1023), mHC('180', 1023), mHC('240', 1023), mHC('300', 1023), mHC('360', 1022)];
+  const tRows = [mR(tH)];
+  tRows.push(mR([mLC('순수한 물', 2200, {left:true}), ...A.temp_data.pure.map((v, i) => mDC(v, i < 6 ? 1023 : 1022))]));
+  ['A','B','C','D'].forEach(kn => {
+    const nm = A.candidates_name[kn] ? ('후보 ' + kn + ' (' + A.candidates_name[kn] + ')') : ('후보 ' + kn);
+    tRows.push(mR([mLC(nm, 2200, {left:true}), ...A.temp_data[kn].map((v, i) => mDC(v, i < 6 ? 1023 : 1022))]));
+  });
+  k.push(mT(tRows));
+
+  k.push(mBullet('냉각 곡선 (시간 vs 온도)'));
+  if (chartImgs.cooling) { const img = mImg(chartImgs.cooling, 540, 300); if (img) k.push(img); }
+  else k.push(mT([mR([mDC('(데이터 미입력)', 9360)])]));
+
+  k.push(mBullet('이론값과 실험값 비교'));
+  k.push(mHint('실험에서 측정한 어는점 내림 = (순수한 물의 어는점) − (용액의 어는점). 이론값은 i × Kf × m 공식으로 계산 (물의 Kf = 1.86, m: 몰랄 농도, i: 반트호프 인자).'));
+  const fpR = [mR([mHC('후보', 2400), mHC('어는점 내림(이론값) (℃)', 3480), mHC('어는점 내림(실험값) (℃)', 3480)])];
+  ['A','B','C','D'].forEach(kn => fpR.push(mR([mLC('후보 ' + kn, 2400), mDC(A.fp_compare[kn].theoretical, 3480), mDC(A.fp_compare[kn].experimental, 3480)])));
+  k.push(mT(fpR));
+
+  k.push(mBullet('분석 및 해석'));
+  k.push(mT([mR([mDC(A.analysis, 9360)])]));
+
+  // Exp B
+  const B = data.part3.expB;
+  k.push(mH2('실험 B.  융해 효율 측정'));
+  k.push(mHint('어는점을 낮추는 것과 실제로 얼음을 "빠르게 녹이는 것"은 다르다.'));
+  k.push(mBullet('실험 목적'));
+  k.push(mT([mR([mDC(B.purpose, 9360)])]));
+  k.push(mBullet('실험 방법'));
+  k.push(mT(B.steps.map((s, i) => mR([mLC('Step ' + (i+1), 1200, {left:true}), mDC(s, 8160)]))));
+  k.push(mBullet('실험 데이터 — 시간에 따른 융해된 물의 누적 질량 (단위: g)'));
+  const mH_ = [mHC('후보 \\ 시간', 2400), ...['0분','2','4','6','8','10'].map(t => mHC(t, 1160))];
+  const mRows = [mR(mH_)];
+  mRows.push(mR([mLC('대조군 (제설제 없음)', 2400, {left:true}), ...B.melt_data.control.map(v => mDC(v, 1160))]));
+  ['A','B','C','D'].forEach(kn => mRows.push(mR([mLC('후보 ' + kn, 2400, {left:true}), ...B.melt_data[kn].map(v => mDC(v, 1160))])));
+  k.push(mT(mRows));
+
+  k.push(mBullet('그래프 (시간 vs 누적 융해량)'));
+  if (chartImgs.melting) { const img = mImg(chartImgs.melting, 540, 300); if (img) k.push(img); }
+  else k.push(mT([mR([mDC('(데이터 미입력)', 9360)])]));
+
+  k.push(mBullet('분석 — 어느 후보가 가장 효과적인가?'));
+  k.push(mT([mR([mDC(B.analysis, 9360)])]));
+
+  // Exp C
+  const Cx = data.part3.expC;
+  k.push(mH2('실험 C.  용해열 측정'));
+  k.push(mHint('물에 녹일 때 발열인지 흡열인지 알아보자.'));
+  k.push(mBullet('실험 데이터'));
+  k.push(mNote('[열량 계산: 열량 = c · 물 질량 · 온도 변화 (물의 비열 c = 4.184 J/g·℃)]'));
+  const ccR_ = [mR([mHC('후보', 1200), mHC('용질 질량 (g)', 1900), mHC('물 질량 (g)', 1900), mHC('온도 변화 (℃)', 2160), mHC('열량', 2200)])];
+  ['A','B','C','D'].forEach(kn => {
+    const d = Cx.data[kn];
+    ccR_.push(mR([mLC('후보 ' + kn, 1200), mDC(d.solute_mass, 1900), mDC(d.water_mass, 1900), mDC(d.temp_change, 2160), mDC(calcHeat(d.solute_mass, d.water_mass, d.temp_change), 2200)]));
+  });
+  k.push(mT(ccR_));
+
+  k.push(mBullet('해석 — 인터넷에서 "용해 엔탈피"를 검색해서 실험값과 비교'));
+  const ccComp = [mR([mHC('후보', 1200), mHC('실험값', 4080), mHC('이론값', 4080)])];
+  ['A','B','C','D'].forEach(kn => ccComp.push(mR([mLC('후보 ' + kn, 1200), mDC(Cx.compare[kn].experimental, 4080), mDC(Cx.compare[kn].theoretical, 4080)])));
+  k.push(mT(ccComp));
+
+  // Exp D
+  const D1 = data.part3.expD1;
+  k.push(mH2('실험 D.  환경 영향 평가'));
+  k.push(mH3('D-1.  식물 발아 영향 실험'));
+  k.push(mHint('동일한 씨앗을 다양한 농도의 제설제 용액에 발아시켜 발아율과 생장을 비교한다.'));
+  k.push(mBullet('실험 설계'));
+  k.push(mT([
+    mR([mLC('사용한 씨앗 종류', 2200, {left:true}), mDC(D1.design.seed_type, 7160)]),
+    mR([mLC('그룹당 씨앗 개수', 2200, {left:true}), mDC(D1.design.seed_count, 7160)]),
+    mR([mLC('테스트 농도', 2200, {left:true}), mDC(D1.design.concentrations, 7160)]),
+    mR([mLC('관찰 기간', 2200, {left:true}), mDC(D1.design.duration, 7160)]),
+  ]));
+
+  k.push(mBullet('발아율 측정 결과'));
+  const d1R = [mR([mHC('', 1200), mHC('0% (대조)', 1400), mHC('0.5%', 1400), mHC('1%', 1400), mHC('3%', 1400), mHC('비고', 2560)])];
+  ['A','B','C','D'].forEach(kn => {
+    const r = D1.results[kn];
+    d1R.push(mR([mLC('후보 ' + kn, 1200), mDC(r.c0, 1400), mDC(r.c05, 1400), mDC(r.c1, 1400), mDC(r.c3, 1400), mDC(r.note, 2560)]));
+  });
+  k.push(mT(d1R));
+  k.push(mNote('※ 발아율(%) = (발아한 씨앗 수 ÷ 전체 씨앗 수) × 100'));
+
+  k.push(mBullet('관찰 사진 및 스케치'));
+  const phCells = ['day0','day3','end'].map((kn, i) => {
+    const labels = ['실험 시작 (Day 0)', '실험 중 (Day 3)', '관찰 종료 시점'];
+    let cc = [mP(mTR(labels[i], { bold: true }), { alignment: 'center', after: 60 })];
+    if (D1.photos[kn]) { const img = mImg(D1.photos[kn], 220, 200); if (img) cc.push(img); }
+    else cc.push(mP(mTR('(사진 없음)', { color: '94a3b8', italics: true }), { alignment: 'center' }));
+    return mC(cc, { width: 3120 });
+  });
+  k.push(mT([mR(phCells)]));
+
+  k.push(mBullet('결과 분석'));
+  k.push(mT([mR([mDC(D1.analysis, 9360)])]));
+
+  const D2 = data.part3.expD2;
+  k.push(mH3('D-2.  금속 부식 실험'));
+  k.push(mHint('철못 또는 알루미늄 조각을 같은 농도의 제설제 용액에 침지하고 3~5일 후 변화를 관찰한다.'));
+  k.push(mBullet('실험 설계'));
+  k.push(mT([
+    mR([mLC('사용 금속', 1800, {left:true}), mDC(D2.design.metal, 7560)]),
+    mR([mLC('용액 농도', 1800, {left:true}), mDC(D2.design.concentration, 7560)]),
+    mR([mLC('침지 기간', 1800, {left:true}), mDC(D2.design.duration, 7560)]),
+  ]));
+
+  k.push(mBullet('부식 측정 결과'));
+  const d2R = [mR([mHC('후보', 2200), mHC('실험 전 질량 (g)', 2386), mHC('실험 후 질량 (g)', 2386), mHC('부식 정도 (1~5점)', 2388)])];
+  [['control','대조군 (증류수)'],['A','후보 A'],['B','후보 B'],['C','후보 C'],['D','후보 D']].forEach(([kn, label]) => {
+    const r = D2.results[kn];
+    d2R.push(mR([mLC(label, 2200, {left:true}), mDC(r.mass_before, 2386), mDC(r.mass_after, 2386), mDC(r.corrosion, 2388)]));
+  });
+  k.push(mT(d2R));
+
+  k.push(mBullet('관찰 사진 (실험 전 / 실험 후)'));
+  const d2Cells = ['before','after'].map((kn, i) => {
+    const labels = ['실험 전', '실험 후'];
+    let cc = [mP(mTR(labels[i], { bold: true }), { alignment: 'center', after: 60 })];
+    if (D2.photos[kn]) { const img = mImg(D2.photos[kn], 320, 220); if (img) cc.push(img); }
+    else cc.push(mP(mTR('(사진 없음)', { color: '94a3b8', italics: true }), { alignment: 'center' }));
+    return mC(cc, { width: 4680 });
+  });
+  k.push(mT([mR(d2Cells)]));
+
+  k.push(mBullet('분석'));
+  k.push(mT([mR([mDC(D2.analysis, 9360)])]));
+
+  // Exp E
+  const E = data.part3.expE;
+  k.push(mH2('실험 E.  (심화) 혼합 제설제 설계'));
+  k.push(mNote('✨ 이 실험은 선택이지만, 완료하면 산출물의 수준이 훨씬 올라간다.'));
+  k.push(mBullet('(1) 단일 물질의 한계'));
+  k.push(mT([mR([mDC(E.single_limits, 9360)])]));
+
+  k.push(mBullet('(2) 우리 모둠이 제안하는 혼합 처방'));
+  const reR = [mR([mHC('성분', 2400), mHC('혼합 비율 (질량%)', 1900), mHC('이 성분을 선택한 이유', 5060)])];
+  E.recipe.forEach(r => reR.push(mR([mDC(r.component, 2400), mDC(r.ratio, 1900), mDC(r.reason, 5060)])));
+  k.push(mT(reR));
+
+  k.push(mBullet('(3) 혼합 제설제 검증 결과'));
+  const verR = [mR([mHC('측정 항목', 2600), mHC('최고 단일 후보', 2200), mHC('우리 혼합 처방', 2200), mHC('개선 여부', 2360)])];
+  [['fp','어는점 내림 (℃)'],['melt','10분 후 융해된 물 (g)'],['germ','식물 발아율 (%, 1% 농도)']].forEach(([kn, label]) => {
+    const v = E.verification[kn];
+    verR.push(mR([mLC(label, 2600, {left:true}), mDC(v.best, 2200), mDC(v.mixed, 2200), mDC(v.improvement, 2360)]));
+  });
+  k.push(mT(verR));
+
+  k.push(mBullet('(4) 결론'));
+  k.push(mT([mR([mDC(E.conclusion, 9360)])]));
+
+  // Part 4
+  k.push(mP(mTR(''), { pageBreakBefore: true, after: 0 }));
+  k.push(mH1('Part 4.  결과'));
+  k.push(mNote('실험 A~E의 데이터를 한 곳에 모아 후보들을 "한눈에 비교 가능한 형태"로 만든다.'));
+
+  k.push(mH2('4-1.  실험 종합 결과표'));
+  const sumR = [mR([mHC('측정 항목', 2400), mHC('후보 A', 1392), mHC('후보 B', 1392), mHC('후보 C', 1392), mHC('후보 D', 1392), mHC('혼합처방', 1392)])];
+  [['fp','어는점 내림 (℃)'],['melt','10분 후 융해 질량 (g)'],['heat','용해열 (온도 변화)'],['germ','식물 발아율 (%, 1%)'],['corrosion','금속 부식 점수'],['price','가격 (원/kg)']].forEach(([kn, label]) => {
+    const s = data.part4.summary[kn];
+    sumR.push(mR([mLC(label, 2400, {left:true}), mDC(s.A, 1392), mDC(s.B, 1392), mDC(s.C, 1392), mDC(s.D, 1392), mDC(s.mixed, 1392)]));
+  });
+  k.push(mT(sumR));
+
+  k.push(mH2('4-2.  평가 매트릭스 점수화'));
+  k.push(mTxt('각 측정값을 1~5점 척도로 환산하자.'));
+  k.push(mHint('예시 점수화 기준 — 어는점 내림: 5℃ 이상 = 5점 / 3~5℃ = 4점 / 1~3℃ = 3점 / 0.5~1℃ = 2점 / 0.5℃ 미만 = 1점'));
+  const scR = [mR([mHC('평가 기준', 2200), mHC('가중치 (%)', 1200), mHC('후보 A', 1192), mHC('후보 B', 1192), mHC('후보 C', 1192), mHC('후보 D', 1192), mHC('혼합처방', 1200)])];
+  [['fp','어는점 내림 효과'],['melt','융해 효율'],['env','환경 영향 (식물+금속)'],['economic','경제성']].forEach(([kn, label]) => {
+    const s = data.part4.scoring[kn];
+    scR.push(mR([mLC(label, 2200, {left:true}), mDC(s.weight, 1200), mDC(s.A, 1192), mDC(s.B, 1192), mDC(s.C, 1192), mDC(s.D, 1192), mDC(s.mixed, 1200)]));
+  });
+  scR.push(mR([
+    mLC('가중 평균 점수', 2200, {left:true}),
+    mLC(String(sumWeights(data.part4.scoring)), 1200),
+    mDC(calcWeightedAverage(data.part4.scoring, 'A'), 1192),
+    mDC(calcWeightedAverage(data.part4.scoring, 'B'), 1192),
+    mDC(calcWeightedAverage(data.part4.scoring, 'C'), 1192),
+    mDC(calcWeightedAverage(data.part4.scoring, 'D'), 1192),
+    mDC(calcWeightedAverage(data.part4.scoring, 'mixed'), 1200),
+  ]));
+  k.push(mT(scR));
+  k.push(mNote('※ 가중 평균 = Σ (기준 점수 × 가중치) ÷ 100'));
+
+  k.push(mH2('4-3.  결과 시각화 (레이더 차트)'));
+  if (chartImgs.radar) { const img = mImg(chartImgs.radar, 480, 380); if (img) k.push(img); }
+  else k.push(mT([mR([mDC('(점수 데이터 미입력)', 9360)])]));
+
+  // Part 5
+  k.push(mP(mTR(''), { pageBreakBefore: true, after: 0 }));
+  k.push(mH1('Part 5.  결론 및 제안'));
+  k.push(mNote('데이터에서 답을 끌어내고, 그 답이 사회에 어떻게 쓰일지 제안한다.'));
+
+  k.push(mH2('5-1.  우리 모둠이 선정한 최적 제설제'));
+  k.push(mBullet('(1) 최적 제설제 선정 결과'));
+  k.push(mT([mR([mDC(data.part5.optimal, 9360)])]));
+  k.push(mBullet('(2) 선정 근거'));
+  k.push(mT([mR([mDC(data.part5.optimal_basis, 9360)])]));
+
+  k.push(mH2('5-2.  사용 용도별 추천'));
+  const useR = [mR([mHC('사용 환경', 2800), mHC('추천 제설제', 2400), mHC('추천 이유', 4160)])];
+  data.part5.use_cases.forEach(uc => useR.push(mR([mLC(uc.env, 2800, {left:true}), mDC(uc.rec, 2400), mDC(uc.reason, 4160)])));
+  k.push(mT(useR));
+
+  k.push(mH2('5-3.  가설 검증 결과'));
+  const resultMap = { supported: '☑ 지지됨    ☐ 부분 지지    ☐ 반증됨', partial: '☐ 지지됨    ☑ 부분 지지    ☐ 반증됨', refuted: '☐ 지지됨    ☐ 부분 지지    ☑ 반증됨', '': '☐ 지지됨    ☐ 부분 지지    ☐ 반증됨' };
+  k.push(mT([
+    mR([mLC('우리의 가설 (2-5)', 2200, {left:true}), mDC(data.part2.hypothesis_statement, 7160)]),
+    mR([mLC('검증 결과', 2200, {left:true}), mDC(resultMap[data.part5.hyp_verification.result] || resultMap[''], 7160)]),
+    mR([mLC('판단 근거', 2200, {left:true}), mDC(data.part5.hyp_verification.basis, 7160)]),
+  ]));
+
+  k.push(mH2('5-4.  연구의 한계'));
+  k.push(mT([mR([mDC(data.part5.limitations, 9360)])]));
+
+  k.push(mH2('5-5.  후속 연구 제안'));
+  k.push(mT([mR([mDC(data.part5.future_research, 9360)])]));
+
+  // Part 6
+  k.push(mP(mTR(''), { pageBreakBefore: true, after: 0 }));
+  k.push(mH1('Part 6.  참고문헌'));
+  k.push(mTxt('조사·인용한 자료를 모두 정리한다. 영재원 산출물에서는 출처 정리가 평가의 큰 부분이다.'));
+  k.push(mT(data.references.map((r, i) => mR([mLC(String(i+1), 800, {left:true}), mDC(r, 8560)]))));
+
+  // Part 7
+  k.push(mP(mTR(''), { pageBreakBefore: true, after: 0 }));
+  k.push(mH1('Part 7.  자기 평가 및 모둠 평가'));
+
+  k.push(mH2('7-1.  자기 평가'));
+  const sf = data.part7.self;
+  k.push(mT([
+    mR([mLC('이름', 2400, {left:true}), mDC(sf.name, 6960)]),
+    mR([mLC('내가 모둠에서 맡은 역할', 2400, {left:true}), mDC(sf.role, 6960)]),
+    mR([mLC('가장 잘했다고 생각하는 부분', 2400, {left:true}), mDC(sf.did_well, 6960)]),
+    mR([mLC('더 잘했어야 했던 부분', 2400, {left:true}), mDC(sf.could_improve, 6960)]),
+    mR([mLC('이 프로젝트로 새로 배운 것', 2400, {left:true}), mDC(sf.learned, 6960)]),
+  ]));
+
+  k.push(mH2('7-2.  모둠 평가'));
+  const ge = data.part7.group_eval;
+  const check = (val, target) => val === target ? '☑' : '☐';
+  const gC = [
+    ['active', '모둠원들이 적극적으로 의견을 냈다'],
+    ['fair', '역할 분담이 공평했다'],
+    ['participate', '실험에 모두 참여했다'],
+    ['helping', '어려운 일이 있을 때 서로 도왔다'],
+    ['honest', '데이터 기록이 정확하고 정직했다'],
+    ['contribute', '보고서·산출물 작성에 모두 기여했다'],
+  ];
+  const geR = [mR([mHC('평가 항목', 4360), mHC('매우 좋음', 1250), mHC('좋음', 1250), mHC('보통', 1250), mHC('미흡', 1250)])];
+  gC.forEach(([kn, label]) => {
+    geR.push(mR([
+      mLC(label, 4360, {left:true}),
+      mLC(check(ge[kn], 'excellent'), 1250),
+      mLC(check(ge[kn], 'good'), 1250),
+      mLC(check(ge[kn], 'fair'), 1250),
+      mLC(check(ge[kn], 'poor'), 1250),
+    ]));
+  });
+  k.push(mT(geR));
+
+  k.push(mBullet('우리 모둠의 자랑스러운 점'));
+  k.push(mT([mR([mDC(data.part7.proud, 9360)])]));
+  k.push(mBullet('다음 프로젝트에서 개선하고 싶은 점'));
+  k.push(mT([mR([mDC(data.part7.improvement, 9360)])]));
+
+  // Build doc
+  const doc = new Document({
+    creator: '영재원',
+    title: '친환경 제설제를 찾아라!',
+    styles: { default: { document: { run: { font: 'Malgun Gothic', size: 20 } } } },
+    sections: [{
+      properties: {
+        page: {
+          size: { width: 11906, height: 16838 }, // A4
+          margin: { top: 1134, right: 1134, bottom: 1134, left: 1134 },
+        },
+      },
+      children: k,
+    }],
+  });
+
+  return Packer.toBlob(doc);
+}
+
+// ===================================================================
+// MAIN APP
+// ===================================================================
+const SECTIONS = [
+  { id: 'cover', label: '표지·요약', comp: CoverSection },
+  { id: 'part1', label: '1. 문제인식', comp: Part1Section },
+  { id: 'part2', label: '2. 주제선정', comp: Part2Section },
+  { id: 'part3', label: '3. 탐구활동', comp: Part3Section },
+  { id: 'part4', label: '4. 결과', comp: Part4Section },
+  { id: 'part5', label: '5. 결론', comp: Part5Section },
+  { id: 'part6', label: '6. 참고문헌', comp: Part6Section },
+  { id: 'part7', label: '7. 자기·모둠 평가', comp: Part7Section },
+];
+
+function App() {
+  const [data, setData] = useState(EMPTY_DATA);
+  const [section, setSection] = useState('cover');
+  const [saveState, setSaveState] = useState('loaded'); // loaded, saving, saved, error
+  const [downloading, setDownloading] = useState(false);
+  const [downloadMsg, setDownloadMsg] = useState('');
+  const saveTimerRef = useRef(null);
+  const initRef = useRef(false);
+
+  // Load on mount
+  useEffect(() => {
+    (async () => {
+      const loaded = await loadData();
+      setData(loaded);
+      initRef.current = true;
+      setSaveState('saved');
+    })();
+  }, []);
+
+  // Autosave on change (debounced)
+  useEffect(() => {
+    if (!initRef.current) return;
+    setSaveState('saving');
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      const ok = await saveData(data);
+      setSaveState(ok ? 'saved' : 'error');
+    }, 800);
+    return () => clearTimeout(saveTimerRef.current);
+  }, [data]);
+
+  const set = useCallback((path, value) => {
+    setData(d => update(d, path, value));
+  }, []);
+
+  const handleDownload = async () => {
+    if (!window.docx) { alert('docx 라이브러리 로딩 실패. 페이지를 새로 고침해 주세요.'); return; }
+    setDownloading(true);
+    setDownloadMsg('차트 이미지 생성 중...');
+    try {
+      // Collect chart images
+      await new Promise(r => setTimeout(r, 100)); // let UI update
+      const canvases = document.querySelectorAll('.chart-box canvas');
+      const chartImgs = {};
+      canvases.forEach((cv, i) => {
+        try {
+          const url = cv.toDataURL('image/png');
+          if (i === 0) chartImgs.cooling = url;
+          else if (i === 1) chartImgs.melting = url;
+          else if (i === 2) chartImgs.radar = url;
+        } catch (e) {}
+      });
+
+      setDownloadMsg('문서 생성 중...');
+      const blob = await buildDoc(data, chartImgs);
+
+      setDownloadMsg('다운로드 시작...');
+      const fname = `친환경_제설제를_찾아라_${(data.cover.group_name || '모둠').replace(/[^\w가-힣]/g, '')}.docx`;
+      saveAs(blob, fname);
+      setDownloadMsg('완료');
+      setTimeout(() => { setDownloading(false); setDownloadMsg(''); }, 800);
+    } catch (e) {
+      console.error(e);
+      alert('문서 생성 중 오류: ' + e.message);
+      setDownloading(false);
+      setDownloadMsg('');
+    }
+  };
+
+  const handleReset = async () => {
+    if (!confirm('모든 입력 내용을 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+    setData(EMPTY_DATA);
+  };
+
+  // Compute progress
+  const progress = useMemo(() => computeProgress(data), [data]);
+
+  const currentIdx = SECTIONS.findIndex(s => s.id === section);
+
+  return (
+    <>
+      <div className="topbar">
+        <h1>친환경 제설제를 찾아라! — 영재원 탐구활동지</h1>
+        <span className={'save-status ' + (saveState === 'saved' ? 'saved' : '')}>
+          {saveState === 'saving' && '저장 중...'}
+          {saveState === 'saved' && '✓ 자동 저장됨'}
+          {saveState === 'error' && '⚠ 저장 실패'}
+          {saveState === 'loaded' && '로딩 중...'}
+        </span>
+        <button className="btn btn-secondary" onClick={handleReset}>초기화</button>
+        <button className="btn" onClick={handleDownload} disabled={downloading}>
+          {downloading ? '생성 중...' : '📥 docx 다운로드'}
+        </button>
+      </div>
+      <div className="nav">
+        {SECTIONS.map(s => (
+          <button key={s.id} className={section === s.id ? 'active' : ''} onClick={() => { setSection(s.id); window.scrollTo(0, 0); }}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="container">
+        <div style={{marginBottom: '20px'}}>
+          <div style={{fontSize:'13px',color:'#6b7280',marginBottom:'4px'}}>작성 진행률: {progress}%</div>
+          <div className="progress-bar"><div style={{width: progress + '%'}}></div></div>
+        </div>
+
+        {/* All sections mounted; inactive ones offscreen (so charts still get a real width and render).
+            Charts must exist in DOM for docx export. 'inert' makes them non-focusable. */}
+        {SECTIONS.map(s => {
+          const Comp = s.comp;
+          const isActive = section === s.id;
+          return (
+            <div
+              key={s.id}
+              style={isActive ? {} : {
+                position: 'absolute',
+                left: '-99999px',
+                top: 0,
+                width: '900px',
+                pointerEvents: 'none',
+              }}
+              aria-hidden={!isActive}
+              {...(isActive ? {} : { inert: '' })}
+            >
+              <Comp data={data} set={set} />
+            </div>
+          );
+        })}
+
+        <div style={{display:'flex',justifyContent:'space-between',marginTop:'40px',paddingTop:'20px',borderTop:'1px solid #e5e7eb'}}>
+          {currentIdx > 0 ? (
+            <button className="btn btn-secondary" onClick={() => { setSection(SECTIONS[currentIdx-1].id); window.scrollTo(0, 0); }}>
+              ← {SECTIONS[currentIdx-1].label}
+            </button>
+          ) : <div />}
+          {currentIdx < SECTIONS.length - 1 ? (
+            <button className="btn" onClick={() => { setSection(SECTIONS[currentIdx+1].id); window.scrollTo(0, 0); }}>
+              {SECTIONS[currentIdx+1].label} →
+            </button>
+          ) : (
+            <button className="btn" onClick={handleDownload} disabled={downloading} style={{fontSize:'15px'}}>
+              📥 완성 — docx 다운로드
+            </button>
+          )}
+        </div>
+      </div>
+
+      {downloading && (
+        <div className="overlay">
+          <div className="overlay-box">
+            <div className="spinner"></div>
+            <div style={{fontWeight:'600',marginBottom:'4px'}}>문서 생성 중</div>
+            <div style={{fontSize:'13px',color:'#6b7280'}}>{downloadMsg}</div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function computeProgress(data) {
+  let total = 0, filled = 0;
+  const visit = (obj) => {
+    if (obj == null) return;
+    if (typeof obj === 'string') {
+      total++;
+      if (obj.trim().length > 0) filled++;
+    } else if (Array.isArray(obj)) {
+      obj.forEach(visit);
+    } else if (typeof obj === 'object') {
+      for (const k in obj) visit(obj[k]);
+    }
+  };
+  visit(data);
+  return total === 0 ? 0 : Math.round(filled / total * 100);
+}
+
+// Mount
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+</script>
