@@ -283,12 +283,14 @@
 </div>
 <noscript><div style="padding:24px;color:#b91c1c;font-family:Malgun Gothic,sans-serif">이 웹앱은 JavaScript가 켜져 있어야 실행됩니다.</div></noscript>
 
-<!-- React 18, Babel, Chart.js, docx, file-saver from cdnjs -->
+<!-- React 18, Chart.js, docx. CDN 실패 시 최소한 원인을 화면에 표시하도록 처리 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.umd.min.js"
+        onerror="var s=document.createElement('script');s.src='https://unpkg.com/docx@7.8.2/build/index.umd.js';document.head.appendChild(s);"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"
+        onerror="console.warn('FileSaver CDN 로딩 실패: 브라우저 기본 다운로드 방식으로 대체합니다.');"></script>
 
 <script>
 // 필수 라이브러리 로딩 확인: 실패해도 빈 화면으로 남지 않게 안내 표시
@@ -304,16 +306,40 @@ const ReactDOM = window.ReactDOM;
 const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
 function resolveDocxLib() {
-    if (window.docx)
-        return window.docx;
-    if (window.docxjs)
-        return window.docxjs;
-    if (window.docxLib)
-        return window.docxLib;
+    const candidates = [window.docx, window.docxjs, window.docxLib];
+    for (const lib of candidates) {
+        if (lib && lib.Document && lib.Packer && lib.Paragraph && lib.TextRun)
+            return lib;
+    }
     return null;
 }
 function resolveSaveAs() {
     return window.saveAs || window.FileSaver?.saveAs || null;
+}
+function safeFilename(name) {
+    return String(name || '모둠')
+        .replace(/[\\/:*?"<>|]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '') || '모둠';
+}
+function downloadBlob(blob, filename) {
+    const saveAsFn = resolveSaveAs();
+    if (saveAsFn) {
+        saveAsFn(blob, filename);
+        return;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        URL.revokeObjectURL(url);
+        a.remove();
+    }, 60000);
 }
 function toNumeric(value) {
     if (value == null || value === '')
@@ -648,6 +674,23 @@ function sumMatrixWeights(matrix) {
 // ===================================================================
 // CHARTS (Chart.js)
 // ===================================================================
+function refreshAllCharts() {
+    const ChartCtor = window.Chart;
+    if (!ChartCtor || !ChartCtor.getChart)
+        return;
+    document.querySelectorAll('.chart-box canvas').forEach((canvas) => {
+        const chart = ChartCtor.getChart(canvas);
+        if (chart) {
+            try {
+                chart.resize();
+                chart.update('none');
+            }
+            catch (err) {
+                console.warn('차트 새로고침 오류:', err);
+            }
+        }
+    });
+}
 function useChart(ref, configRef, deps) {
     const chartInstance = useRef(null);
     useEffect(() => {
@@ -664,11 +707,18 @@ function useChart(ref, configRef, deps) {
             if (chartInstance.current) {
                 chartInstance.current.data = config.data;
                 chartInstance.current.options = config.options;
-                chartInstance.current.update();
+                chartInstance.current.resize();
+                chartInstance.current.update('none');
             }
             else {
                 chartInstance.current = new ChartCtor(ref.current, config);
             }
+            requestAnimationFrame(() => {
+                if (chartInstance.current) {
+                    chartInstance.current.resize();
+                    chartInstance.current.update('none');
+                }
+            });
         }
         catch (err) {
             console.error('차트 렌더링 오류:', err);
@@ -1122,7 +1172,7 @@ function ExpA({ data, set }) {
                 [0, 1, 2, 3, 4, 5, 6].map(i => React.createElement("col", { key: i }))),
             React.createElement("thead", null,
                 React.createElement("tr", null,
-                    React.createElement("th", null, "\uD6C4\uBCF4 \\ \uC2DC\uAC04(\uCD08)"),
+                    React.createElement("th", null, "\uD6C4\uBCF4 / \uC2DC\uAC04(\uCD08)"),
                     React.createElement("th", null, "0\uCD08"),
                     React.createElement("th", null, "60"),
                     React.createElement("th", null, "120"),
@@ -1201,7 +1251,7 @@ function ExpB({ data, set }) {
                 [0, 1, 2, 3, 4, 5].map(i => React.createElement("col", { key: i }))),
             React.createElement("thead", null,
                 React.createElement("tr", null,
-                    React.createElement("th", null, "\uD6C4\uBCF4 \\ \uC2DC\uAC04"),
+                    React.createElement("th", null, "\uD6C4\uBCF4 / \uC2DC\uAC04"),
                     React.createElement("th", null, "0\uBD84"),
                     React.createElement("th", null, "2"),
                     React.createElement("th", null, "4"),
@@ -2224,20 +2274,26 @@ function App() {
     }, []);
     const handleDownload = async () => {
         const docxLib = resolveDocxLib();
-        const saveAsFn = resolveSaveAs();
-        if (!docxLib || !saveAsFn) {
-            alert('문서 다운로드 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.');
+        if (!docxLib) {
+            alert('DOCX 생성 라이브러리를 불러오지 못했습니다. 인터넷 연결, 학교망 CDN 차단 여부를 확인한 뒤 새로고침해 주세요. 그래도 안 되면 다른 브라우저(Chrome/Edge)로 접속해 보세요.');
             return;
         }
         setDownloading(true);
-        setDownloadMsg('차트 이미지 생성 중...');
+        setDownloadMsg('입력값 저장 중...');
         try {
-            // Collect chart images
-            await new Promise(r => setTimeout(r, 100)); // let UI update
-            const canvases = document.querySelectorAll('.chart-box canvas');
+            await saveData(data);
+            setDownloadMsg('차트 이미지 생성 중...');
+            refreshAllCharts();
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            const canvases = Array.from(document.querySelectorAll('.chart-box canvas'));
             const chartImgs = {};
             canvases.forEach((cv, i) => {
                 try {
+                    const chart = window.Chart && window.Chart.getChart ? window.Chart.getChart(cv) : null;
+                    if (chart) {
+                        chart.resize();
+                        chart.update('none');
+                    }
                     const url = cv.toDataURL('image/png');
                     if (i === 0)
                         chartImgs.cooling = url;
@@ -2246,19 +2302,23 @@ function App() {
                     else if (i === 2)
                         chartImgs.radar = url;
                 }
-                catch (e) { }
+                catch (e) {
+                    console.warn('차트 이미지 변환 실패:', e);
+                }
             });
             setDownloadMsg('문서 생성 중...');
             const blob = await buildDoc(data, chartImgs);
+            if (!blob || blob.size === 0)
+                throw new Error('빈 DOCX 파일이 생성되었습니다.');
             setDownloadMsg('다운로드 시작...');
-            const fname = `친환경_제설제를_찾아라_${(data.cover.group_name || '모둠').replace(/[^\w가-힣]/g, '')}.docx`;
-            saveAsFn(blob, fname);
+            const fname = `친환경_제설제를_찾아라_${safeFilename(data.cover.group_name)}.docx`;
+            downloadBlob(blob, fname);
             setDownloadMsg('완료');
             setTimeout(() => { setDownloading(false); setDownloadMsg(''); }, 800);
         }
         catch (e) {
             console.error(e);
-            alert('문서 생성 중 오류: ' + e.message);
+            alert('문서 생성 중 오류: ' + (e && e.message ? e.message : String(e)));
             setDownloading(false);
             setDownloadMsg('');
         }
@@ -2281,7 +2341,7 @@ function App() {
                 saveState === 'loaded' && '로딩 중...'),
             React.createElement("button", { className: "btn btn-secondary", onClick: handleReset }, "\uCD08\uAE30\uD654"),
             React.createElement("button", { className: "btn", onClick: handleDownload, disabled: downloading }, downloading ? '생성 중...' : '📥 docx 다운로드')),
-        React.createElement("div", { className: "nav" }, SECTIONS.map(s => (React.createElement("button", { key: s.id, className: section === s.id ? 'active' : '', onClick: () => { setSection(s.id); window.scrollTo(0, 0); } }, s.label)))),
+        React.createElement("div", { className: "nav" }, SECTIONS.map(s => (React.createElement("button", { key: s.id, className: section === s.id ? 'active' : '', onClick: () => { setSection(s.id); window.scrollTo(0, 0); setTimeout(refreshAllCharts, 80); } }, s.label)))),
         React.createElement("div", { className: "container" },
             React.createElement("div", { style: { marginBottom: '20px' } },
                 React.createElement("div", { style: { fontSize: '13px', color: '#6b7280', marginBottom: '4px' } },
