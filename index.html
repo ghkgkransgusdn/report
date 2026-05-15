@@ -302,6 +302,30 @@ if (!window.React || !window.ReactDOM) {
 const React = window.React;
 const ReactDOM = window.ReactDOM;
 const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+function resolveDocxLib() {
+    if (window.docx)
+        return window.docx;
+    if (window.docxjs)
+        return window.docxjs;
+    if (window.docxLib)
+        return window.docxLib;
+    return null;
+}
+function resolveSaveAs() {
+    return window.saveAs || window.FileSaver?.saveAs || null;
+}
+function toNumeric(value) {
+    if (value == null || value === '')
+        return null;
+    if (typeof value === 'number')
+        return Number.isFinite(value) ? value : null;
+    const cleaned = String(value).trim().replace(/,/g, '').replace(/[^0-9.+-]/g, '');
+    if (!cleaned)
+        return null;
+    const n = parseFloat(cleaned);
+    return Number.isFinite(n) ? n : null;
+}
 // ===================================================================
 // DATA SHAPE — initial empty state
 // ===================================================================
@@ -685,7 +709,7 @@ function CoolingCurveChart({ data, names }) {
             { key: 'D', label: '후보 D' + (names.D ? ` (${names.D})` : '') },
         ];
         for (const r of rows) {
-            const vals = (data[r.key] || []).map(v => v === '' || v == null ? null : parseFloat(v));
+            const vals = (data[r.key] || []).map(v => v === '' || v == null ? null : toNumeric(v));
             if (vals.some(v => v != null && !isNaN(v))) {
                 datasets.push({
                     label: r.label,
@@ -730,7 +754,7 @@ function MeltingCurveChart({ data }) {
             { key: 'D', label: '후보 D' },
         ];
         for (const r of rows) {
-            const vals = (data[r.key] || []).map(v => v === '' || v == null ? null : parseFloat(v));
+            const vals = (data[r.key] || []).map(v => v === '' || v == null ? null : toNumeric(v));
             if (vals.some(v => v != null && !isNaN(v))) {
                 datasets.push({
                     label: r.label,
@@ -1687,7 +1711,7 @@ function Part7Section({ data, set }) {
 const PRIMARY_HEX = '1F4E79';
 const GRAY_HEX = 'F2F2F2';
 const BORDER_HEX = '999999';
-function D() { return window.docx; }
+function D() { return resolveDocxLib(); }
 function mTR(text, opts = {}) {
     return new (D().TextRun)({
         text: String(text || ''),
@@ -1880,7 +1904,7 @@ function buildDoc(data, chartImgs) {
     k.push(mT(A.steps.map((s, i) => mR([mLC('Step ' + (i + 1), 1200, { left: true }), mDC(s, 8160)]))));
     k.push(mBullet('실험 데이터 — 시간에 따른 온도 변화 (단위: ℃)'));
     k.push(mHint('냉각욕(얼음+소금)에 용액을 담그고 60초(1분) 간격으로 온도를 기록.'));
-    const tH = [mHC('후보 \\ 시간(초)', 2200), mHC('0초', 1023), mHC('60', 1023), mHC('120', 1023), mHC('180', 1023), mHC('240', 1023), mHC('300', 1023), mHC('360', 1022)];
+    const tH = [mHC('후보 \/ 시간(초)', 2200), mHC('0초', 1023), mHC('60', 1023), mHC('120', 1023), mHC('180', 1023), mHC('240', 1023), mHC('300', 1023), mHC('360', 1022)];
     const tRows = [mR(tH)];
     tRows.push(mR([mLC('순수한 물', 2200, { left: true }), ...A.temp_data.pure.map((v, i) => mDC(v, i < 6 ? 1023 : 1022))]));
     ['A', 'B', 'C', 'D'].forEach(kn => {
@@ -1912,7 +1936,7 @@ function buildDoc(data, chartImgs) {
     k.push(mBullet('실험 방법'));
     k.push(mT(B.steps.map((s, i) => mR([mLC('Step ' + (i + 1), 1200, { left: true }), mDC(s, 8160)]))));
     k.push(mBullet('실험 데이터 — 시간에 따른 융해된 물의 누적 질량 (단위: g)'));
-    const mH_ = [mHC('후보 \\ 시간', 2400), ...['0분', '2', '4', '6', '8', '10'].map(t => mHC(t, 1160))];
+    const mH_ = [mHC('후보 \/ 시간', 2400), ...['0분', '2', '4', '6', '8', '10'].map(t => mHC(t, 1160))];
     const mRows = [mR(mH_)];
     mRows.push(mR([mLC('대조군 (제설제 없음)', 2400, { left: true }), ...B.melt_data.control.map(v => mDC(v, 1160))]));
     ['A', 'B', 'C', 'D'].forEach(kn => mRows.push(mR([mLC('후보 ' + kn, 2400, { left: true }), ...B.melt_data[kn].map(v => mDC(v, 1160))])));
@@ -2199,8 +2223,10 @@ function App() {
         setData(d => update(d, path, value));
     }, []);
     const handleDownload = async () => {
-        if (!window.docx) {
-            alert('docx 라이브러리 로딩 실패. 페이지를 새로 고침해 주세요.');
+        const docxLib = resolveDocxLib();
+        const saveAsFn = resolveSaveAs();
+        if (!docxLib || !saveAsFn) {
+            alert('문서 다운로드 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.');
             return;
         }
         setDownloading(true);
@@ -2226,7 +2252,7 @@ function App() {
             const blob = await buildDoc(data, chartImgs);
             setDownloadMsg('다운로드 시작...');
             const fname = `친환경_제설제를_찾아라_${(data.cover.group_name || '모둠').replace(/[^\w가-힣]/g, '')}.docx`;
-            saveAs(blob, fname);
+            saveAsFn(blob, fname);
             setDownloadMsg('완료');
             setTimeout(() => { setDownloading(false); setDownloadMsg(''); }, 800);
         }
